@@ -1,278 +1,202 @@
-# Module 4 — Hands-On Lab: GCP Security Best Practices
+# GCP Custom Role Lab — Hands-On Beginner Exercise
 
 **Level:** Beginner  
-**Duration:** 60–90 minutes  
-**Prerequisites:** A Google Cloud account with billing enabled (Free Tier is sufficient)
+**Duration:** 30–45 minutes  
+**Prerequisites:** A Google Cloud account (Free Tier is sufficient)
 
 ---
 
-## Lab Overview
+## What You Will Do
 
-In this lab you will manually explore and configure three core GCP security features:
+In this lab you will:
 
-- Understand the Shared Responsibility boundary using IAM
-- Explore Security Command Center findings
-- Configure Identity-Aware Proxy (IAP) on a simple App Engine app
+1. Create a **custom IAM role** with a small, specific set of permissions
+2. Attach it to a **service account**
+3. Verify the role works as expected using **Security Command Center**
 
-No scripts or automation tools are used. Every step is performed through the **Google Cloud Console** UI.
+This is a focused, single-path exercise — no scripts, no automation, everything done through the **Google Cloud Console UI**.
 
 ---
 
 ## Lab Architecture
 
 ```
-[Your Browser]
-     |
-     v
 [Google Cloud Console]
-     |
-     |--- IAM (Shared Responsibility demo)
-     |--- Security Command Center (findings review)
-     |--- App Engine App + IAP (Zero-Trust access control)
+        |
+        |--- IAM & Admin
+        |       |--- Custom Role  (lab-storage-viewer-role)
+        |       |--- Service Account  (lab-custom-sa)
+        |           |--- Assigned: lab-storage-viewer-role
+        |
+        |--- Security Command Center
+                |--- Verify no overprivilege findings
 ```
 
 ---
 
-## Part 1 — Shared Responsibility: Exploring IAM
+## Part 1 — Create a Custom IAM Role
 
-The goal here is to see, firsthand, what YOU (the customer) are responsible for managing — specifically identity and access.
-
-### Step 1.1 — Open IAM
+### Step 1.1 — Open IAM Roles
 
 1. Go to [console.cloud.google.com](https://console.cloud.google.com)
 2. Select your project from the top dropdown
-3. In the left sidebar, click **IAM & Admin** → **IAM**
+3. In the left sidebar click **IAM & Admin** → **Roles**
 
-You will see a list of principals (accounts) and their roles. This is your side of the shared responsibility model.
+### Step 1.2 — Create the Custom Role
 
-### Step 1.2 — Review Existing Roles
+1. Click **+ Create Role** at the top of the page
+2. Fill in the following fields:
 
-1. Look at the **Role** column for each principal
-2. Identify any accounts with **Owner** or **Editor** roles
-3. Ask yourself: *Does every account here need this level of access?*
+| Field | Value |
+|---|---|
+| Title | `Lab Storage Viewer` |
+| Description | `Custom role — read-only access to Cloud Storage only` |
+| ID | `labStorageViewer` |
+| Role launch stage | `General Availability` |
 
-> **Concept Check:** Google manages the underlying infrastructure, but you are fully responsible for who has access to your project. An overprivileged account is a customer-side security gap, not a Google-side one.
+3. Click **+ Add Permissions**
 
-### Step 1.3 — Create a Read-Only Service Account
+### Step 1.3 — Add Specific Permissions
+
+In the permissions filter box, search for and add **each** of the following permissions one by one:
+
+| Permission | What It Allows |
+|---|---|
+| `storage.buckets.get` | Read metadata of a bucket |
+| `storage.buckets.list` | List all buckets in the project |
+| `storage.objects.get` | Read/download objects in a bucket |
+| `storage.objects.list` | List objects inside a bucket |
+
+> **Why these four?** Together they allow someone to browse and read Cloud Storage — but nothing else. They cannot create, delete, or modify any resource. This is least-privilege in practice.
+
+4. After adding all four, click **Create**
+
+You should now see `Lab Storage Viewer` listed on the Roles page with **4 permissions**.
+
+---
+
+## Part 2 — Create a Service Account and Assign the Custom Role
+
+### Step 2.1 — Create a Service Account
 
 1. In the left sidebar click **IAM & Admin** → **Service Accounts**
 2. Click **+ Create Service Account**
 3. Fill in:
-   - **Name:** `lab-readonly-sa`
-   - **Description:** Lab service account with minimal permissions
+
+| Field | Value |
+|---|---|
+| Name | `lab-custom-sa` |
+| Description | `Service account for custom role lab` |
+
 4. Click **Create and Continue**
-5. In the **Grant this service account access** section, choose the role: **Viewer**
-6. Click **Continue** → **Done**
 
-> **Why this matters:** Viewer is the least privilege needed to read resources. Assigning Owner to a service account is a common misconfiguration that Security Command Center will flag.
+### Step 2.2 — Assign Your Custom Role
 
-### Step 1.4 — Observe What Viewer Cannot Do
+1. In the **Grant this service account access** section, click the **Role** dropdown
+2. In the filter box, type `Lab Storage Viewer`
+3. Select the custom role you just created
+4. Click **Continue** → **Done**
 
-1. Note that the `lab-readonly-sa` has **Viewer** role
-2. Think about what this account cannot do: it cannot create, delete, or modify any resource
-3. This is the principle of **least privilege** — a core customer responsibility
+### Step 2.3 — Confirm the Assignment
+
+1. Go back to **IAM & Admin** → **IAM**
+2. Find `lab-custom-sa` in the principals list
+3. Confirm the **Role** column shows `Lab Storage Viewer`
+
+> **Concept Check:** Notice the difference between this and the built-in `Viewer` role. The built-in `Viewer` grants read access to almost *everything* in GCP. Your custom role grants read access to Cloud Storage *only*. Same concept, far smaller blast radius if compromised.
 
 ---
 
-## Part 2 — Security Command Center: Reviewing Findings
+## Part 3 — Verify in Security Command Center
 
-Security Command Center (SCC) gives you visibility into misconfigurations and vulnerabilities across your GCP project.
+### Step 3.1 — Open Security Command Center
 
-### Step 2.1 — Open Security Command Center
+1. In the left sidebar click **Security** → **Security Command Center**
+2. If this is your first time, click **Get Started** and activate the Standard tier (it is free)
+3. Wait 2–3 minutes for the initial scan
 
-1. In the left sidebar, click **Security** → **Security Command Center**
-2. If prompted, click **Get Started** and activate SCC for your project (Standard tier is free)
-3. Wait 1–2 minutes for the initial scan to complete
-
-### Step 2.2 — Explore the Dashboard
-
-Once loaded, you will see:
-
-- **Findings** — active security issues detected
-- **Assets** — a full inventory of your GCP resources
-- **Compliance** — how your project maps to security benchmarks
-
-Take a few minutes to click through each tab and read what is listed.
-
-### Step 2.3 — View Active Findings
+### Step 3.2 — Check for Findings Related to Your Service Account
 
 1. Click the **Findings** tab
-2. Look at the **Category** column — common findings include:
-   - `PUBLIC_BUCKET_ACL` — a Cloud Storage bucket is publicly accessible
-   - `OPEN_FIREWALL` — a firewall rule allows traffic from `0.0.0.0/0`
-   - `MFA_NOT_ENFORCED` — multi-factor authentication is not required
+2. In the filter bar, search for: `lab-custom-sa`
+3. Observe the result — there should be **no findings** for this service account
 
-3. Click on any finding to expand its details
-4. Read the **Explanation** and **Recommendation** sections
+> **Why?** SCC flags overly permissive accounts (like those with Owner or Editor). Because your service account uses a minimal custom role, it does not trigger any misconfiguration alerts. This is the goal.
 
-> **Observation:** SCC is telling you exactly what to fix and why. This is the tool that bridges visibility and action on your side of the shared responsibility boundary.
+### Step 3.3 — Compare with an Overprivileged Account (Optional Observation)
 
-### Step 2.4 — Check Asset Inventory
-
-1. Click the **Assets** tab
-2. Use the **Filter** bar to filter by **Asset Type**: `storage.googleapis.com/Bucket`
-3. Review what buckets exist in your project and their properties
-
-> **Question to reflect on:** Are there any assets here you did not know existed? SCC's asset inventory catches shadow resources that developers may have created and forgotten.
-
-### Step 2.5 — Create a Misconfiguration to Observe (Optional)
-
-If you want to see SCC detect something live:
-
-1. Go to **Cloud Storage** → **Buckets**
-2. Click **Create Bucket**, name it `lab-test-public-bucket-[yourname]`, click through defaults and click **Create**
-3. Click on the bucket → **Permissions** tab → **Grant Access**
-4. Add principal: `allUsers`, role: **Storage Object Viewer** → click **Save**
-5. Confirm the public access warning
-6. Wait 5–10 minutes, then return to SCC → **Findings**
-7. You should see a new `PUBLIC_BUCKET_ACL` finding appear
-
-**Clean up:** After observing the finding, remove the `allUsers` permission from the bucket.
+1. Still in the **Findings** tab, look for findings with category `ADMIN_SERVICE_ACCOUNT` or `SERVICE_ACCOUNT_KEY_EXPOSED`
+2. These are examples of what SCC catches when accounts are configured poorly
+3. Your `lab-custom-sa` should not appear in any of these
 
 ---
 
-## Part 3 — Identity-Aware Proxy: Zero-Trust Access Control
+## Part 4 — Test What the Role Can and Cannot Do
 
-IAP lets you protect an application so that only specific Google accounts can access it — no VPN needed.
+This section helps you internalize what the role actually enforces.
 
-### Step 3.1 — Enable the Required APIs
+### Permissions the Role HAS
 
-1. In the left sidebar, go to **APIs & Services** → **Library**
-2. Search for and enable the following APIs (click each → Enable):
-   - `App Engine API`
-   - `Cloud Build API`
-   - `Identity-Aware Proxy API`
+| Action | Allowed? |
+|---|---|
+| List all Cloud Storage buckets | Yes |
+| View bucket metadata | Yes |
+| Download a file from a bucket | Yes |
+| List files inside a bucket | Yes |
 
-### Step 3.2 — Deploy a Simple App Engine Application
+### Permissions the Role DOES NOT Have
 
-You will deploy a minimal Hello World app manually through Cloud Shell.
+| Action | Allowed? |
+|---|---|
+| Create a new bucket | No |
+| Delete a bucket or file | No |
+| Upload a file | No |
+| Access Compute Engine VMs | No |
+| Access BigQuery datasets | No |
+| Modify IAM policies | No |
 
-1. Click the **Cloud Shell** icon (terminal icon) in the top-right corner of the console
-2. In the Cloud Shell terminal, run these commands **one by one**:
-
-```bash
-# Create a project directory
-mkdir iap-lab && cd iap-lab
-```
-
-```bash
-# Create the application file
-cat > main.py << 'EOF'
-from flask import Flask, request
-app = Flask(__name__)
-
-@app.route('/')
-def hello():
-    email = request.headers.get('X-Goog-Authenticated-User-Email', 'Unknown')
-    return f'<h1>Hello from IAP Lab!</h1><p>Logged in as: {email}</p>'
-
-if __name__ == '__main__':
-    app.run(host='127.0.0.1', port=8080)
-EOF
-```
-
-```bash
-# Create the requirements file
-cat > requirements.txt << 'EOF'
-Flask==2.3.3
-EOF
-```
-
-```bash
-# Create the App Engine config
-cat > app.yaml << 'EOF'
-runtime: python311
-EOF
-```
-
-```bash
-# Deploy the app (replace YOUR_PROJECT_ID with your actual project ID)
-gcloud app deploy --project=YOUR_PROJECT_ID --quiet
-```
-
-3. When prompted to select a region, choose one close to you (e.g., `us-central`)
-4. Deployment takes 3–5 minutes. When done, note the URL shown (e.g., `https://your-project-id.uc.r.appspot.com`)
-
-### Step 3.3 — Access the App Without IAP
-
-1. Open the App Engine URL in your browser
-2. You should see the Hello World page — **anyone** with the link can access it
-3. This is the problem IAP will solve
-
-### Step 3.4 — Enable IAP on the App Engine App
-
-1. In the Cloud Console sidebar, go to **Security** → **Identity-Aware Proxy**
-2. You will see your App Engine app listed under **HTTPS Resources**
-3. Toggle the **IAP** switch to **ON** for your app
-4. In the confirmation dialog, click **Turn On**
-
-### Step 3.5 — Try Accessing the App Again
-
-1. Open the App Engine URL in a **new incognito/private browser window**
-2. You should now see a **Google Sign-In page** or a **403 Access Denied** error
-3. This confirms IAP is blocking unauthenticated access
-
-> **What just happened:** IAP placed itself in front of your app. Every request now goes through Google's identity verification before reaching your application code. No code changes were needed.
-
-### Step 3.6 — Grant Yourself Access Through IAP
-
-1. Return to **Security** → **Identity-Aware Proxy**
-2. Check the checkbox next to your App Engine app
-3. In the right-hand panel, click **Add Principal**
-4. Enter your own Google account email
-5. Assign the role: **IAP-secured Web App User**
-6. Click **Save**
-
-### Step 3.7 — Verify Access
-
-1. Return to the App Engine URL in your browser
-2. Sign in with the Google account you just added
-3. You should now see the Hello World page with your email displayed
-4. Try accessing it from a different Google account — it should be denied
-
-> **Key Insight:** You just implemented zero-trust access. The application is on the public internet, but only your explicitly allowed identity can reach it. This is what IAP + BeyondCorp replaces a VPN with.
+> **Key insight:** A compromised service account with this role can *see* your storage but cannot damage, delete, or exfiltrate to other services. Limiting the role limits the damage.
 
 ---
 
-## Part 4 — Reflection Questions
+## Part 5 — Reflection Questions
 
-Answer these in your notes after completing the lab:
+Write your answers in your notes:
 
-1. In Part 1, which roles did you find in your IAM page? Were any overly permissive?
+1. What is the difference between your custom role and the built-in `Viewer` role?
 
-2. In Part 2, what findings did SCC surface? Were any surprising?
+2. Why is it better to create a custom role rather than always using built-in roles?
 
-3. Before enabling IAP, who could access your App Engine app?
+3. If a developer needed to *upload* files as well, which single permission would you add to this role?
 
-4. After enabling IAP, what changed — in the infrastructure, in the code, or in the access policy?
+4. What did Security Command Center show for your service account, and why?
 
-5. How does IAP demonstrate the zero-trust principle of "never trust, always verify"?
+5. What would happen in SCC if you had assigned the `Owner` role to this service account instead?
 
 ---
 
-## Cleanup — Avoid Charges
+## Cleanup — Avoid Any Charges
 
-Perform these steps after the lab to avoid ongoing costs:
+Everything created in this lab is free, but clean up to keep your project tidy:
 
 | Resource | How to Delete |
 |---|---|
-| App Engine app | Cloud Shell → `gcloud app versions delete VERSION_ID` |
-| Test storage bucket | Cloud Storage → select bucket → Delete |
-| Service account | IAM & Admin → Service Accounts → select → Delete |
-| IAP config | Automatically removed when App Engine app is deleted |
+| Service Account (`lab-custom-sa`) | IAM & Admin → Service Accounts → select → Delete |
+| Custom Role (`Lab Storage Viewer`) | IAM & Admin → Roles → select → Delete Role |
 
-> **Note:** App Engine has a free daily quota. If you stay within it, no charges apply. The service account and SCC are always free.
+> **Note:** Custom roles and service accounts have no cost. SCC Standard tier is also free.
 
 ---
 
 ## Summary
 
-| Part | What You Did | Security Concept |
+| Step | What You Did | Concept Practiced |
 |---|---|---|
-| Part 1 | Created a least-privilege service account | Shared Responsibility — customer owns IAM |
-| Part 2 | Reviewed SCC findings and asset inventory | Visibility and misconfiguration detection |
-| Part 3 | Protected an app with IAP | Zero-trust, identity-based access control |
+| Part 1 | Created a custom role with 4 storage permissions | Least privilege, custom roles |
+| Part 2 | Created a service account and assigned the custom role | IAM principal and role binding |
+| Part 3 | Verified no SCC findings for the account | Misconfiguration detection |
+| Part 4 | Reviewed what the role allows and blocks | Permission boundary awareness |
 
 ---
 
-*Module 4 Lab — GCP Security Best Practices & Compliance*
+*GCP Security — Custom Role Hands-On Lab*
