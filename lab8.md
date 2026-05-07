@@ -84,8 +84,8 @@ Internet Traffic
 
 ```bash
 #!/bin/bash
-apt-get update -y
-apt-get install -y python3
+sudo apt-get update -y
+sudo apt-get install -y python3
 cat > /tmp/api_server.py << 'EOF'
 from http.server import HTTPServer, BaseHTTPRequestHandler
 import json, socket
