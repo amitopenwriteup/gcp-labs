@@ -114,10 +114,10 @@ systemctl start apache2
 
 ```bash
 #!/bin/bash
-apt-get update -y
-apt-get install -y apache2
-echo "<h1>v2 — $(hostname)</h1>" > /var/www/html/index.html
-systemctl start apache2
+sudo apt-get update -y
+sudo apt-get install -y apache2
+sudo echo "<h1>v2 — $(hostname)</h1>" > /var/www/html/index.html
+sudo systemctl start apache2
 ```
 
 4. Click **CREATE**.
