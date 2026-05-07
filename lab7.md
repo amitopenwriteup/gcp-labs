@@ -204,8 +204,8 @@ gcloud compute networks subnets create peer-subnet \
    | Your VPC network | `lab-vpc` |
    | Peered VPC network | In same project |
    | VPC network name | `peer-vpc` |
-   | Export custom routes | ✅ Enabled |
-   | Import custom routes | ✅ Enabled |
+   | Export custom routes |  Enabled |
+   | Import custom routes |  Enabled |
 
 3. Click **Create**.
 
@@ -218,8 +218,8 @@ Repeat the process:
 | Name | `peer-to-lab` |
 | Your VPC network | `peer-vpc` |
 | VPC network name | `lab-vpc` |
-| Export custom routes | ✅ Enabled |
-| Import custom routes | ✅ Enabled |
+| Export custom routes |  Enabled |
+| Import custom routes | Enabled |
 
 > **Note:** Both peerings must be **Active** before traffic flows. Status shows `INACTIVE` until both sides are configured.
 
