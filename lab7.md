@@ -393,53 +393,6 @@ gcloud compute firewall-rules create deny-all-ingress \
 
 ---
 
-### Lab 2.2 — Hierarchical Firewall Policies
-
-Hierarchical policies apply at the **Organization** or **Folder** level and cascade down to all projects beneath them.
-
-#### Concept
-
-```
-Organization
-  └── Folder: Production
-        ├── Project A  ← policy applies here automatically
-        └── Project B  ← policy applies here automatically
-```
-
-#### Step 1 — Create a Firewall Policy at Org Level
-
-```bash
-# Create the policy
-gcloud compute firewall-policies create \
-  --short-name=org-baseline-policy \
-  --description="Baseline security rules for all projects" \
-  --organization=YOUR_ORG_ID
-
-# Add a rule: block known malicious ranges (example)
-gcloud compute firewall-policies rules create 500 \
-  --firewall-policy=org-baseline-policy \
-  --organization=YOUR_ORG_ID \
-  --direction=INGRESS \
-  --action=deny \
-  --src-ip-ranges=192.0.2.0/24 \
-  --layer4-configs=all \
-  --description="Block test/reserved range"
-
-# Associate policy with the organization
-gcloud compute firewall-policies associations create \
-  --firewall-policy=org-baseline-policy \
-  --organization=YOUR_ORG_ID
-```
-
-#### Step 2 — Review Policy in the Console
-
-1. Navigate to **VPC Network → Firewall Policies**.
-2. Select `org-baseline-policy`.
-3. Review the rule list. Inherited rules show a lock icon in project-level views.
-
-> **Key behaviour:** Hierarchical policy rules are evaluated **before** VPC firewall rules. A `GOTO_NEXT` action passes evaluation down to VPC-level rules.
-
----
 
 ## Module 3 — Advanced Networking {#module-3}
 
