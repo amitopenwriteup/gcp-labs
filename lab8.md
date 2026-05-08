@@ -222,8 +222,8 @@ python3 /tmp/api_server.py &
 
 ```bash
 #!/bin/bash
-apt-get update -y
-apt-get install -y netcat-openbsd
+sudo apt-get update -y
+sudo apt-get install -y netcat-openbsd
 while true; do
   echo -e "HTTP/1.1 200 OK\r\nContent-Length: 28\r\n\r\nHello from NLB Backend!" | nc -l -p 80 -q 1
 done &
