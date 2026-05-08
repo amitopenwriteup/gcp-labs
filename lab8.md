@@ -241,7 +241,7 @@ done &
    - **Name:** `nlb-instance-group`
    - **Template:** `nlb-instance-template`
    - **Location:** Single zone → `us-central1-a`
-   - **Instances:** `2`
+   - **Instances:** `1`
 3. Click **Create**
 
 ---
