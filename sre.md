@@ -374,11 +374,12 @@ First, create an uptime check:
    - **Applies to:** Select `sre-workshop-web-01`
    - **Path:** `/`
    - **Check frequency:** 1 minute
+#other values keep it default
 3. Click **Continue** → **Create**
 
 Back in Dashboard:
 - Click **Add Widget** → **Scorecard**
-- **Metric:** `monitoring.googleapis.com/uptime_check/check_passed`
+- **Metric:** `check for uptime`
 - Title: `Uptime Check Status`
 - Click **Apply**
 
