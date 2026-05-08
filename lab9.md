@@ -403,18 +403,6 @@ Remove all resources created in this lab to avoid ongoing charges.
 
 ---
 
-### Troubleshooting Common Issues
 
-| Issue | Likely Cause | Resolution (UI Path) |
-|---|---|---|
-| 403 Forbidden on public object | Public access prevention enabled | `Bucket` → `Permissions` → Check public access setting |
-| Lifecycle rules not executing | XML may have conflict; check rule order | `Lifecycle` tab → Review/delete conflicting rules |
-| Snapshot job failing | Disk in use, permissions issue | `Snapshots` → Check error message; verify IAM |
-| Filestore mount fails | Firewall blocking NFS port 2049 | `VPC` → `Firewall Rules` → Allow port 2049 from VM CIDR |
-| Transfer job 0 files copied | Source bucket permissions not granted | Grant `Storage Object Viewer` to Transfer Service account |
-
----
-
-*Workshop developed for Google Cloud Storage fundamentals training.*  
 *All labs are designed for the Google Cloud Console UI — no CLI or automation required.*  
 *Last updated: June 2025*
