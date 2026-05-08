@@ -448,9 +448,7 @@ Back in Dashboard:
 
 ### Alert 3: Log-Based 5xx Error Spike
 
-- **Metric:** `logging.googleapis.com/user/nginx_500_errors`
-- **Threshold:** `10` (errors in 5 min window)
-- **Alert name:** `SRE - HTTP 5xx Error Spike`
+- Try yourself
 
 ---
 
@@ -458,7 +456,7 @@ Back in Dashboard:
 
 ### Step 1: Open Logs Explorer
 
-- Go to **Cloud Logging** → **Logs Explorer**
+- Go to  → **Logs Explorer**
 - Set time range: **Last 1 hour**
 
 ---
@@ -504,101 +502,11 @@ severity>=WARNING
 
 ---
 
-### Step 2: Use Log Analytics (SQL-Style Queries)
 
-- Click **Log Analytics** in the left menu
-
-**Count errors by hour:**
-```sql
-SELECT
-  TIMESTAMP_TRUNC(timestamp, HOUR) AS hour,
-  COUNT(*) AS error_count
-FROM `YOUR_PROJECT_ID._Default._Default`
-WHERE log_id = "nginx_access"
-  AND http_request.status >= 500
-  AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
-GROUP BY hour
-ORDER BY hour DESC
-```
-
-**Top 10 requested URLs:**
-```sql
-SELECT
-  http_request.request_url AS url,
-  COUNT(*) AS request_count
-FROM `YOUR_PROJECT_ID._Default._Default`
-WHERE log_id = "nginx_access"
-  AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 1 HOUR)
-GROUP BY url
-ORDER BY request_count DESC
-LIMIT 10
-```
-
-**Unique IPs by hour:**
-```sql
-SELECT
-  TIMESTAMP_TRUNC(timestamp, HOUR) AS hour,
-  COUNT(DISTINCT http_request.remote_ip) AS unique_ips
-FROM `YOUR_PROJECT_ID._Default._Default`
-WHERE log_id = "nginx_access"
-  AND timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 6 HOUR)
-GROUP BY hour
-ORDER BY hour DESC
-```
-
-> **Replace** `YOUR_PROJECT_ID` with your actual GCP project ID (visible in the project selector at the top).
 
 ---
 
-## Part 10: Load Testing & Validation
-
-### Step 1: Generate CPU Load
-
-SSH into `sre-workshop-web-01`:
-
-```bash
-sudo apt-get install stress -y
-stress --cpu 2 --timeout 300s &
-```
-
-### Step 2: Generate Web Traffic
-
-```bash
-cat > /tmp/generate_traffic.sh << 'EOF'
-#!/bin/bash
-for i in {1..1000}; do
-  curl -s http://localhost/ > /dev/null
-  curl -s http://localhost/nonexistent-page > /dev/null
-  sleep 0.1
-done
-EOF
-chmod +x /tmp/generate_traffic.sh
-/tmp/generate_traffic.sh &
-```
-
-### Step 3: Monitor in Real Time
-
-- Return to your **SRE Production Dashboard - GCP**
-- Observe CPU spike in the CPU widget
-- Watch the live logs panel update
-- Check the 5xx error widget
-
-### Step 4: Verify Alerting
-
-- Navigate to **Monitoring** → **Alerting**
-- You should see an **incident** created for High CPU
-- Check your email for the notification
-
-### Step 5: Stop Load Test
-
-```bash
-pkill stress
-pkill -f generate_traffic.sh
-```
-
----
-
-## Part 11: SLO Tracking
+##  SLO Tracking
 
 ### Step 1: Create an SLO
 
@@ -618,100 +526,3 @@ pkill -f generate_traffic.sh
 
 ---
 
-## Troubleshooting Guide
-
-### Issue: Ops Agent Not Running After VM Creation
-
-```bash
-# Check status
-sudo systemctl status google-cloud-ops-agent
-
-# Check logs
-sudo journalctl -u google-cloud-ops-agent -n 100
-
-# Restart
-sudo systemctl restart google-cloud-ops-agent
-```
-
-If the agent was not installed via the checkbox, install manually:
-
-```bash
-curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
-sudo bash add-google-cloud-ops-agent-repo.sh --also-install
-```
-
-### Issue: Metrics Not Appearing in Cloud Monitoring
-
-- Verify service account has `roles/monitoring.metricWriter`
-- Wait 3–5 minutes for first metric data to appear
-- Check agent logs: `sudo journalctl -u google-cloud-ops-agent -n 100`
-
-### Issue: Logs Not Appearing in Cloud Logging
-
-```bash
-# Check if Nginx is writing logs
-sudo tail -f /var/log/nginx/access.log
-
-# Verify agent config
-sudo cat /etc/google-cloud-ops-agent/config.yaml
-
-# Check agent errors
-sudo journalctl -u google-cloud-ops-agent | grep -i error
-```
-
-### Issue: Log Analytics Query Fails
-
-- Replace `YOUR_PROJECT_ID` with your actual project ID
-- Ensure **Log Analytics** is enabled for the `_Default` log bucket:
-  - Go to **Logging** → **Log Storage** → **_Default** bucket → **Edit** → Enable Log Analytics
-
----
-
-## Cleanup Instructions
-
-> ⚠️ Complete cleanup to avoid charges.
-
-```
-Monitoring → Alerting → Select all policies → Delete
-Monitoring → Uptime checks → Select all → Delete
-Monitoring → Dashboards → Select SRE Production Dashboard → Delete
-Cloud Logging → Log-based Metrics → Select nginx_500_errors → Delete
-Compute Engine → VM instances → Select sre-workshop-web-01 → Delete
-Monitoring → SLOs → Select → Delete
-```
-
----
-
-## Additional Resources
-
-| Resource | Link |
-|----------|------|
-| Cloud Monitoring Documentation | https://cloud.google.com/monitoring/docs |
-| Cloud Logging Documentation | https://cloud.google.com/logging/docs |
-| Ops Agent Documentation | https://cloud.google.com/stackdriver/docs/solutions/agents/ops-agent |
-| Log Analytics (SQL) | https://cloud.google.com/logging/docs/analyze/query-and-view |
-| SLO Documentation | https://cloud.google.com/stackdriver/docs/solutions/slo-monitoring |
-| GCP Free Tier | https://cloud.google.com/free |
-
----
-
-## AWS → GCP Service Mapping Reference
-
-| AWS Service | GCP Equivalent |
-|-------------|----------------|
-| EC2 | Compute Engine |
-| CloudWatch Metrics | Cloud Monitoring |
-| CloudWatch Logs | Cloud Logging |
-| CloudWatch Agent | Ops Agent |
-| CloudWatch Alarms | Alerting Policies |
-| CloudWatch Dashboards | Cloud Monitoring Dashboards |
-| CloudWatch Logs Insights | Log Analytics (SQL) / Logs Explorer |
-| IAM Instance Profile | Service Account (attached to VM) |
-| CloudWatchAgentServerPolicy | `roles/monitoring.metricWriter` + `roles/logging.logWriter` |
-| SNS Topics | Notification Channels |
-| CloudWatch Metric Filters | Log-Based Metrics |
-| CloudWatch SLOs | Cloud Monitoring SLOs |
-
----
-
-*Single VM edition — streamlined from the 2-VM workshop. Ops Agent installation updated to use the GCP Console Observability checkbox at VM creation time.*
