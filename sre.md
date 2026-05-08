@@ -258,7 +258,6 @@ Open another browser tab and hit your VM's **External IP** on port 80 (from the 
 ### Step 1: Open Cloud Monitoring
 
 - Search for **Monitoring** in the top bar
-- Click **Cloud Monitoring**
 - The **Overview** page shows your project health
 
 ### Step 2: Explore Metrics Explorer
