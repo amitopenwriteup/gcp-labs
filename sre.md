@@ -1,6 +1,6 @@
 # SRE Dashboards with GCP Compute Engine, Cloud Monitoring & Cloud Logging
 
-## 2-Hour Hands-On Workshop
+## 2-Hour Hands-On Workshop (Single VM Edition)
 
 ---
 
@@ -12,7 +12,7 @@
 
 ## Learning Objectives
 
-- Configure Cloud Monitoring for Compute Engine instances
+- Configure Cloud Monitoring for a Compute Engine instance
 - Set up Cloud Logging for application log collection
 - Create SRE dashboards with metrics and log-based widgets
 - Write Cloud Logging queries (Log Analytics / MQL)
@@ -20,7 +20,6 @@
 - Implement SRE metrics — SLIs, SLOs, and Error Budgets
 
 ---
-
 
 ## Part 1: SRE Concepts Overview
 
@@ -35,8 +34,8 @@
 
 ### SRE Targets
 
-- **SLI (Service Level Indicator):** Measurable metric — e.g., % of requests < 200ms
-- **SLO (Service Level Objective):** Target — e.g., 99.9% availability (43.8 min downtime/month)
+- **SLI (Service Level Indicator):** Measurable metric — e.g., % of requests < 200ms  
+- **SLO (Service Level Objective):** Target — e.g., 99.9% availability (43.8 min downtime/month)  
 - **Error Budget:** Remaining allowable downtime = `100% - SLO`
 
 ---
@@ -75,11 +74,11 @@ The default Compute Engine service account already has **Logs Writer** and **Mon
 - Find the service account ending in `-compute@developer.gserviceaccount.com`
 - Confirm it has `roles/logging.logWriter` and `roles/monitoring.metricWriter`
 
-> ✅ **GCP assigns these roles automatically** to the default Compute Engine service account — no manual IAM role creation needed (unlike AWS IAM instance profiles).
+> ✅ GCP assigns these roles automatically to the default Compute Engine service account — no manual IAM role creation needed.
 
 ---
 
-## Part 3: Launch Compute Engine VMs
+## Part 3: Launch a Single Compute Engine VM
 
 ### Step 1: Navigate to Compute Engine
 
@@ -87,7 +86,7 @@ The default Compute Engine service account already has **Logs Writer** and **Mon
 - Click **VM instances**
 - Click **Create Instance**
 
-### Step 2: Configure First VM
+### Step 2: Configure the VM
 
 | Field | Value |
 |-------|-------|
@@ -103,15 +102,27 @@ Under **Identity and API access**:
 - Service account: **Compute Engine default service account**
 - Access scopes: **Allow full access to all Cloud APIs**
 
-Click **Create**.
+### Step 3: Enable Ops Agent During VM Creation *(Recommended)*
 
-### Step 3: Create Second VM
+> ✅ **This is the easiest way** — GCP can install the Ops Agent automatically when the VM is created, so you skip manual installation entirely.
 
-Repeat the same configuration with:
-- **Name:** `sre-workshop-web-02`
-- **Zone:** `us-central1-b`
+While still on the **Create an instance** page:
 
-### Step 4: Add Labels (GCP equivalent of Tags)
+1. Scroll down to the **Observability** section (below the firewall settings)
+2. You will see:
+
+   ```
+   Ops Agent (Recommended) ⓘ
+   Observe your instance and application through collection of logs and metrics.
+   ☑ Install Ops Agent for Monitoring and Logging
+   ```
+
+3. **Check the box** — `☑ Install Ops Agent for Monitoring and Logging`
+4. Click **Create**
+
+> ✅ The Ops Agent will be installed and started automatically when the VM boots. No SSH commands needed for installation.
+
+### Step 4: Add Labels
 
 - Select `sre-workshop-web-01` → click **Edit**
 - Scroll to **Labels** → click **Add label**
@@ -122,42 +133,42 @@ Repeat the same configuration with:
 | `application` | `webserver` |
 | `team` | `sre` |
 
-- Click **Save**. Repeat for `sre-workshop-web-02`.
-
-> ✅ Both VMs now have permissions to send metrics and logs to Cloud Monitoring and Cloud Logging via the attached service account.
+- Click **Save**
 
 ---
 
-## Part 4: Install Ops Agent & Configure Logging
-
-The **Ops Agent** is GCP's unified agent that collects both **metrics** (replacing Stackdriver Monitoring agent) and **logs** (replacing Stackdriver Logging agent).
+## Part 4: Verify Ops Agent & Configure Nginx Logging
 
 ### Step 1: Connect to VM via SSH
 
 - In **Compute Engine** → **VM instances**
 - Click **SSH** button next to `sre-workshop-web-01`
-- A browser-based terminal opens
 
-### Step 2: Install the Ops Agent
+### Step 2: Verify the Ops Agent is Running
 
-```bash
-curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
-sudo bash add-google-cloud-ops-agent-repo.sh --also-install
-```
-
-Verify installation:
+Since the agent was installed automatically at VM creation, just verify its status:
 
 ```bash
 sudo systemctl status google-cloud-ops-agent
 ```
 
-### Step 3: Create Ops Agent Configuration
+You should see `active (running)`. If not, wait 1–2 minutes and retry, or install manually:
+
+```bash
+# Manual install fallback (only if the checkbox method failed)
+curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
+sudo bash add-google-cloud-ops-agent-repo.sh --also-install
+```
+
+### Step 3: Configure Ops Agent to Collect Nginx Logs
+
+The default Ops Agent config collects system metrics and syslog. Add Nginx log collection:
 
 ```bash
 sudo nano /etc/google-cloud-ops-agent/config.yaml
 ```
 
-Paste this configuration (collects metrics AND Nginx logs):
+Replace the contents with:
 
 ```yaml
 logging:
@@ -264,8 +275,6 @@ sudo tail -f /var/log/nginx/access.log
 
 Open another browser tab and hit your VM's **External IP** on port 80 (from the VM instances page). You should see log entries appear.
 
-> Repeat **Parts 4 and 5** on `sre-workshop-web-02` by SSH-ing into it.
-
 ---
 
 ## Part 6: Explore Cloud Monitoring Metrics
@@ -285,8 +294,7 @@ Open another browser tab and hit your VM's **External IP** on port 80 (from the 
 compute.googleapis.com/instance/cpu/utilization
 ```
 
-- Select it — you'll see CPU for both VMs
-- Filter by label: `instance_name = sre-workshop-web-01`
+- Select it — you'll see CPU for your VM
 
 ### Step 3: Key GCP Metrics to Know
 
@@ -355,7 +363,7 @@ compute.googleapis.com/instance/cpu/utilization
 
 ### Widget 5: Log-Based Error Count (Line Chart)
 
-We'll create a log-based metric first:
+First, create a log-based metric:
 
 1. Go to **Cloud Logging** → **Log-based Metrics** (left menu)
 2. Click **Create Metric**
@@ -416,8 +424,7 @@ Back in Dashboard:
 
 ### Step 2: Arrange and Save Dashboard
 
-- Drag widgets to your preferred layout
-- Suggested layout:
+- Drag widgets to your preferred layout:
   - Row 1: Uptime status (full width)
   - Row 2: CPU | Memory | Disk
   - Row 3: Network traffic | 5xx errors
@@ -442,10 +449,7 @@ Back in Dashboard:
 ### Alert 1: High CPU
 
 - Click **Alerting** → **Create Policy**
-- Click **Select a metric**:
-  ```
-  compute.googleapis.com/instance/cpu/utilization
-  ```
+- **Metric:** `compute.googleapis.com/instance/cpu/utilization`
 - **Condition type:** Threshold
 - **Threshold:** `0.8` (80%)
 - **Duration:** 5 minutes
@@ -458,7 +462,6 @@ Back in Dashboard:
 
 ### Alert 2: High Memory
 
-- Create another policy:
 - **Metric:** `agent.googleapis.com/memory/percent_used`
 - **Filter:** `state = used`
 - **Threshold:** `85`
@@ -491,8 +494,6 @@ resource.type="gce_instance"
 log_id("nginx_access")
 ```
 
----
-
 ### Query 2: HTTP 4xx and 5xx Errors
 
 ```
@@ -500,8 +501,6 @@ resource.type="gce_instance"
 log_id("nginx_access")
 httpRequest.status>=400
 ```
-
----
 
 ### Query 3: 5xx Errors Only
 
@@ -511,8 +510,6 @@ log_id("nginx_access")
 httpRequest.status>=500
 ```
 
----
-
 ### Query 4: Nginx Error Logs
 
 ```
@@ -520,8 +517,6 @@ resource.type="gce_instance"
 log_id("nginx_error")
 severity>=ERROR
 ```
-
----
 
 ### Query 5: System Logs (Syslog)
 
@@ -536,7 +531,6 @@ severity>=WARNING
 ### Step 2: Use Log Analytics (SQL-Style Queries)
 
 - Click **Log Analytics** in the left menu
-- Run aggregation queries using standard SQL:
 
 **Count errors by hour:**
 ```sql
@@ -591,17 +585,14 @@ sudo apt-get install stress -y
 stress --cpu 2 --timeout 300s &
 ```
 
-### Step 2: Generate Web Traffic with Errors
+### Step 2: Generate Web Traffic
 
 ```bash
 cat > /tmp/generate_traffic.sh << 'EOF'
 #!/bin/bash
 for i in {1..1000}; do
-  # Normal requests
   curl -s http://localhost/ > /dev/null
-  # 404 errors
   curl -s http://localhost/nonexistent-page > /dev/null
-  # Random delay
   sleep 0.1
 done
 EOF
@@ -614,7 +605,7 @@ chmod +x /tmp/generate_traffic.sh
 - Return to your **SRE Production Dashboard - GCP**
 - Observe CPU spike in the CPU widget
 - Watch the live logs panel update
-- Check the 5xx error widget (404s won't trigger the 5xx metric, that's expected)
+- Check the 5xx error widget
 
 ### Step 4: Verify Alerting
 
@@ -636,9 +627,7 @@ pkill -f generate_traffic.sh
 ### Step 1: Create an SLO
 
 - Go to **Monitoring** → **SLOs** → **Create SLO**
-- **Service:** Select your uptime check service or create a custom service
 - **SLI type:** Availability
-- **Request-based SLI metric:** Use uptime check pass rate
 - **SLO target:** `99.9%`
 - **Compliance period:** Rolling 30 days
 - Click **Create SLO**
@@ -651,34 +640,38 @@ pkill -f generate_traffic.sh
 - Title: `Availability SLO - 99.9%`
 - Click **Apply** → **Save**
 
-> ✅ You now have an error budget widget showing remaining downtime allowance for the month.
-
 ---
 
 ## Troubleshooting Guide
 
-### Issue: Metrics Not Appearing in Cloud Monitoring
+### Issue: Ops Agent Not Running After VM Creation
 
-**Solutions:**
 ```bash
-# Check Ops Agent status
+# Check status
 sudo systemctl status google-cloud-ops-agent
 
-# Check agent logs
+# Check logs
 sudo journalctl -u google-cloud-ops-agent -n 100
 
-# Restart agent
+# Restart
 sudo systemctl restart google-cloud-ops-agent
 ```
 
+If the agent was not installed via the checkbox, install manually:
+
+```bash
+curl -sSO https://dl.google.com/cloudagents/add-google-cloud-ops-agent-repo.sh
+sudo bash add-google-cloud-ops-agent-repo.sh --also-install
+```
+
+### Issue: Metrics Not Appearing in Cloud Monitoring
+
 - Verify service account has `roles/monitoring.metricWriter`
 - Wait 3–5 minutes for first metric data to appear
-
----
+- Check agent logs: `sudo journalctl -u google-cloud-ops-agent -n 100`
 
 ### Issue: Logs Not Appearing in Cloud Logging
 
-**Solutions:**
 ```bash
 # Check if Nginx is writing logs
 sudo tail -f /var/log/nginx/access.log
@@ -690,11 +683,6 @@ sudo cat /etc/google-cloud-ops-agent/config.yaml
 sudo journalctl -u google-cloud-ops-agent | grep -i error
 ```
 
-- Verify service account has `roles/logging.logWriter`
-- Confirm Nginx log paths match the config
-
----
-
 ### Issue: Log Analytics Query Fails
 
 - Replace `YOUR_PROJECT_ID` with your actual project ID
@@ -703,70 +691,16 @@ sudo journalctl -u google-cloud-ops-agent | grep -i error
 
 ---
 
-## Workshop Summary & Best Practices
-
-### Dashboard Organization (GCP)
-
-- Combine infrastructure metrics (Ops Agent) and log-based metrics for full observability
-- Use **Log Panels** for live tail views directly in dashboards
-- Group related widgets — uptime at top, then metrics, then logs
-- Enable **Auto Refresh** (top right of dashboard) for production monitoring
-
-### Log Analysis Best Practices
-
-- Use **structured logging** in apps (JSON format) for automatic field parsing
-- Create **log-based metrics** for important patterns (errors, latency buckets)
-- Use **Log Analytics** for aggregate SQL queries; use **Logs Explorer** for ad-hoc filtering
-- Set appropriate **retention periods** per log bucket (default: 30 days for `_Default`)
-
-### Alerting Strategy
-
-- Set thresholds from historical baseline data
-- Create **multi-condition alerts** (CPU AND memory) to reduce false positives
-- Use **alert policies with multiple channels** (email + PagerDuty/Slack via webhooks)
-- Test alerts regularly using load testing
-
-### SRE Metrics Priority (GCP)
-
-1. **Availability** — Uptime check pass rate
-2. **Latency** — Response time from Nginx logs
-3. **Error Rate** — HTTP 5xx log-based metric
-4. **Saturation** — CPU, memory, disk from Ops Agent
-
----
-
 ## Cleanup Instructions
 
-> ⚠️ **Complete cleanup to avoid charges.**
+> ⚠️ Complete cleanup to avoid charges.
 
-### Delete Alerting Policies
 ```
 Monitoring → Alerting → Select all policies → Delete
-```
-
-### Delete Uptime Checks
-```
 Monitoring → Uptime checks → Select all → Delete
-```
-
-### Delete Dashboards
-```
 Monitoring → Dashboards → Select SRE Production Dashboard → Delete
-```
-
-### Delete Log-Based Metrics
-```
 Cloud Logging → Log-based Metrics → Select nginx_500_errors → Delete
-```
-
-### Delete VM Instances
-```
-Compute Engine → VM instances → Select sre-workshop-web-01 and web-02
-→ Delete
-```
-
-### Delete SLOs (if created)
-```
+Compute Engine → VM instances → Select sre-workshop-web-01 → Delete
 Monitoring → SLOs → Select → Delete
 ```
 
@@ -781,7 +715,6 @@ Monitoring → SLOs → Select → Delete
 | Ops Agent Documentation | https://cloud.google.com/stackdriver/docs/solutions/agents/ops-agent |
 | Log Analytics (SQL) | https://cloud.google.com/logging/docs/analyze/query-and-view |
 | SLO Documentation | https://cloud.google.com/stackdriver/docs/solutions/slo-monitoring |
-| Compute Engine Monitoring | https://cloud.google.com/compute/docs/instances/monitor-instances |
 | GCP Free Tier | https://cloud.google.com/free |
 
 ---
@@ -805,4 +738,4 @@ Monitoring → SLOs → Select → Delete
 
 ---
 
-*Lab designed as a GCP equivalent of the AWS EC2 + CloudWatch + Logs SRE Workshop. Reduced from 5 hours to 2 hours by using GCP's integrated Ops Agent (single install for metrics + logs), automatic IAM via service accounts, and pre-built log parsers.*
+*Single VM edition — streamlined from the 2-VM workshop. Ops Agent installation updated to use the GCP Console Observability checkbox at VM creation time.*
