@@ -113,21 +113,38 @@ Use the following sample files to get started:
 
 ### Step 4 — Configure Website Settings
 
-1. Go to your bucket → click the **Settings** tab
-2. Scroll down to the **Static website** section
-3. Set **Main page suffix:** `index.html`
-4. Set **Not found page:** `404.html`
-5. Click **Save**
+The static website configuration option has been removed from the GCP Console UI. Use the **Cloud Shell** instead:
 
-> **Note:** The Static website section is only visible when the bucket's access control is set to **Fine-grained**. If you don't see it, check **Permissions** tab and confirm the access control setting.
+1. In the GCP Console, click the **Activate Cloud Shell** button (top-right toolbar `>_`)
+2. Run the following command, replacing `[BUCKET_NAME]` with your bucket name:
+
+```bash
+gcloud storage buckets update gs://[BUCKET_NAME] \
+  --web-main-page-suffix=index.html \
+  --web-error-page=404.html
+```
+
+3. You should see a confirmation message once the update is applied.
+
+> **Tip:** To open Cloud Shell, you can also navigate to **console.cloud.google.com** and click the terminal icon in the top navigation bar.
 
 ---
 
 ### Step 5 — Test Your Website
 
-1. Copy the bucket's **public URL** from the bucket details page:  
-   Format: `https://storage.googleapis.com/[BUCKET_NAME]/index.html`
-2. Open in browser — your HTML page should render
+1. Get your bucket's public URL using Cloud Shell:
+
+```bash
+echo "https://storage.googleapis.com/[BUCKET_NAME]/index.html"
+```
+
+Or to list public URLs of all objects in your bucket:
+
+```bash
+gcloud storage ls --recursive gs://[BUCKET_NAME] | sed 's|gs://|https://storage.googleapis.com/|'
+```
+
+2. Open the URL in your browser — your HTML page should render
 3. Test 404 by visiting a non-existent path
 
 ---
