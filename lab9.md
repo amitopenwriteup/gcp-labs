@@ -36,6 +36,63 @@
 4. Upload a custom `404.html` file for error handling
 5. Optionally upload CSS, JS, and image assets
 
+Use the following sample files to get started:
+
+**index.html**
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>My GCS Static Site</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 60px auto;
+      text-align: center;
+      color: #333;
+    }
+    h1 { color: #1a73e8; }
+  </style>
+</head>
+<body>
+  <h1>Welcome to My Static Website</h1>
+  <p>This page is hosted on Google Cloud Storage.</p>
+</body>
+</html>
+```
+
+**404.html**
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Page Not Found</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 60px auto;
+      text-align: center;
+      color: #333;
+    }
+    h1 { color: #d93025; }
+    a { color: #1a73e8; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <h1>404 — Page Not Found</h1>
+  <p>The page you're looking for doesn't exist.</p>
+  <a href="/index.html">← Back to Home</a>
+</body>
+</html>
+```
+
 ---
 
 ### Step 3 — Make Objects Public
