@@ -507,22 +507,46 @@ severity>=WARNING
 ---
 
 ##  SLO Tracking
+>  GCP SLOs require a **Service** to be defined first. Compute Engine VMs are not auto-detected — you must create a Custom service manually before an SLO can be attached.
 
-### Step 1: Create an SLO
+### Step 1: Define a Custom Service
 
-- Go to **Monitoring** → **SLOs** → **Create SLO**
-- **SLI type:** Availability
-- **SLO target:** `99.9%`
-- **Compliance period:** Rolling 30 days
-- Click **Create SLO**
+- Go to **Monitoring** → **SLOs**
+- Click **+ Define service** ( top of page)
+- Under **Select service type**, click **Custom**
+- Fill in:
+  - **Service ID:** `sre-workshop-web`
+  - **Display name:** `SRE Workshop Web Server`
+- Click **Submit**
 
-### Step 2: Add SLO Widget to Dashboard
+### Step 2: Create an SLO on the Service
+
+- You will be taken to the service detail page
+- Click **+ Create SLO**
+- Configure:
+  - **SLI type:** `Availability` or go for none if not selected
+  - **Request-based or Window-based:** `Request-based`
+  - Click **Continue**
+- Set the metric:
+  - **SLI metric:** Use uptime check pass rate
+    - Select serach for `uptime`
+  - Click **Continue**
+- Set the SLO target:
+  - **Goal:** `99.9`%
+  - **Compliance period:** Rolling `30` days
+  - Click **Continue**
+- Review and click **Create SLO**
+
+### Step 3: Add SLO Widget to Dashboard
 
 - Open **SRE Production Dashboard - GCP**
-- Click **Add Widget** → **Error Budget**
-- Select your SLO
+- Click **Add Widget** → **SLO**
+- Select the SLO you just created (`SRE Workshop Web Server`)
 - Title: `Availability SLO - 99.9%`
 - Click **Apply** → **Save**
+
+
+
 
 ---
 
