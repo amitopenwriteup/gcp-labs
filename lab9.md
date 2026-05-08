@@ -113,10 +113,13 @@ Use the following sample files to get started:
 
 ### Step 4 — Configure Website Settings
 
-1. Go to bucket → **Website Configuration** (found under `⋮` → `Edit website configuration` or bucket settings)
-2. Set **Main page suffix:** `index.html`
-3. Set **Not found page:** `404.html`
-4. Click **Save**
+1. Go to your bucket → click the **Settings** tab
+2. Scroll down to the **Static website** section
+3. Set **Main page suffix:** `index.html`
+4. Set **Not found page:** `404.html`
+5. Click **Save**
+
+> **Note:** The Static website section is only visible when the bucket's access control is set to **Fine-grained**. If you don't see it, check **Permissions** tab and confirm the access control setting.
 
 ---
 
