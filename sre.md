@@ -356,7 +356,7 @@ First, create a log-based metric:
 
 Back in Dashboard:
 - Click **Add Widget** → **Line Chart**
-- **Metric:** `logging.googleapis.com/user/nginx_500_errors`
+- **Metric:** `VM Instance - logging/user/nginx_500_errors`
 - Title: `HTTP 5xx Error Rate`
 - Click **Apply**
 
