@@ -257,7 +257,7 @@ Your **Lifecycle** tab should now show 3 rules:
 
 1. **Compute Engine** → **VM Instances** → **Create Instance**
 2. Configure:
-   - Name: `lab3-disk-vm`
+   - Name: `lab3-disk-vm-username`
    - Region: `us-central1` / Zone: `us-central1-a`
    - Machine type: `e2-medium`
    - Boot disk: **Balanced persistent disk**, 20 GB, Debian 11
