@@ -1,6 +1,6 @@
 # SRE Dashboards with GCP Compute Engine, Cloud Monitoring & Cloud Logging
 
-## 2-Hour Hands-On Workshop (Single VM Edition)
+## 2.5-Hour Hands-On Workshop (Single VM Edition)
 
 ---
 
