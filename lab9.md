@@ -299,7 +299,7 @@ Your **Lifecycle** tab should now show 3 rules:
 
 ### Step 5 — Create a Snapshot Schedule
 
-1. **Compute Engine** → **Resource Policies** → **Create Resource Policy**
+1. **Compute Engine** → **snapshot** → 
 2. Choose: **Snapshot Schedule**
 3. Configure:
    - Name: `lab3-daily-snapshot`
