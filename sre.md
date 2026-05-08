@@ -165,51 +165,27 @@ sudo bash add-google-cloud-ops-agent-repo.sh --also-install
 The default Ops Agent config collects system metrics and syslog. Add Nginx log collection:
 
 ```bash
-sudo nano /etc/google-cloud-ops-agent/config.yaml
-```
-
-Replace the contents with:
-
-```yaml
+sudo tee /etc/google-cloud-ops-agent/config.yaml > /dev/null << 'EOF'
 logging:
   receivers:
-    nginx_access:
-      type: files
-      include_paths:
-        - /var/log/nginx/access.log
-    nginx_error:
-      type: files
-      include_paths:
-        - /var/log/nginx/error.log
     syslog:
       type: files
       include_paths:
         - /var/log/syslog
-  processors:
-    parse_nginx_access:
-      type: parse_nginx_combined
-  pipelines:
-    nginx_access_pipeline:
-      receivers: [nginx_access]
-      processors: [parse_nginx_access]
-    nginx_error_pipeline:
-      receivers: [nginx_error]
-    syslog_pipeline:
-      receivers: [syslog]
-
+  service:
+    pipelines:
+      syslog_pipeline:
+        receivers: [syslog]
 metrics:
   receivers:
     hostmetrics:
       type: hostmetrics
       collection_interval: 60s
-  processors:
-    metrics_filter:
-      type: exclude_metrics
-      metrics_pattern: []
-  pipelines:
-    default_pipeline:
-      receivers: [hostmetrics]
-      processors: [metrics_filter]
+  service:
+    pipelines:
+      default_pipeline:
+        receivers: [hostmetrics]
+EOF
 ```
 
 Press `Ctrl+X`, then `Y`, then `Enter` to save.
