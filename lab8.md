@@ -259,33 +259,111 @@ done &
 
 ### Step 2.4 — Create Network Load Balancer
 
-1. **Network Services → Load Balancing → Create Load Balancer**
-2. Select **Network Load Balancer (TCP/UDP/SSL)** → **Start Configuration**
-3. Select:
-   - **Internet facing or internal:** From Internet
-   - **Region:** `us-central1`
-4. **Name:** `api-nlb`
+# Step 2.4 — Create Network Load Balancer
 
-**Backend Configuration:**
-5. Click **Backend configuration**
-   - **Backend type:** Target pool
-   - **Name:** `nlb-target-pool`
-   - **Region:** `us-central1`
-   - **Health check:** Create health check
-     - Name: `nlb-health-check`
-     - Protocol: `TCP`
-     - Port: `80`
-   - **Instances:** Add all instances from `nlb-instance-group`
-6. Click **Done**
+## Overview
 
-**Frontend Configuration:**
-7. Click **Frontend configuration**
-   - **Name:** `nlb-frontend`
-   - **Protocol:** `TCP`
-   - **IP:** Create static IP → `nlb-lb-ip`
-   - **Port:** `80`
-8. Click **Done → Review → Create**
+Corrected steps based on actual GCP Console wizard screens.
 
+---
+
+## Step 1 — Type of Load Balancer
+
+1. Navigate to **Navigation Menu → Network Services → Load Balancing**
+2. Click **+ Create Load Balancer**
+3. Select **Network Load Balancer (TCP/UDP/SSL)**
+4. Click **Start configuration**
+
+---
+
+## Step 2 — Load Balancer Type
+
+5. Select **Proxy load balancer**
+   - Proxy-based load balancing of TCP traffic with advanced traffic control
+   - Supports TCP and TLS protocols
+   - Backends: GCE and GKE
+6. Click **Next**
+
+---
+
+## Step 3 — Public Facing or Internal
+
+7. Select **Public facing (external)**
+   - Routes requests from clients over the internet to targets
+8. Click **Next**
+
+---
+
+## Step 4 — Global or Single Region Deployment
+
+9. Select **Best for regional workloads**
+   - Single region — keeps traffic within `us-central1`
+10. Click **Next**
+
+---
+
+## Step 5 — Load Balancer Generation
+
+11. Select **Global external Application Load Balancer**
+    - Uses `EXTERNAL_MANAGED` load balancing scheme *(Recommended)*
+    - Provides Advanced Traffic Management
+12. Click **Next**
+
+---
+
+## Step 6 — Configure the Load Balancer
+
+### Basic Configuration
+
+13. **Name:** `api-nlb`
+
+---
+
+### Backend Configuration
+
+14. Click **Backend configuration → Create a backend service**
+
+| Field | Value |
+|-------|-------|
+| Backend type | `Instance group` |
+| Name | `nlb-backend-service` |
+| Instance group | `nlb-instance-group` |
+| Region | `us-central1` |
+| Port numbers | `80` |
+
+15. **Health check:** Click **Create health check**
+
+| Field | Value |
+|-------|-------|
+| Name | `nlb-health-check` |
+| Protocol | `TCP` |
+| Port | `80` |
+
+16. Click **Save**
+
+---
+
+### Frontend Configuration
+
+17. Click **Frontend configuration**
+
+| Field | Value |
+|-------|-------|
+| Name | `nlb-frontend` |
+| Protocol | `TCP` |
+| Network Service Tier | `Premium` |
+| IP address | `Ephemeral` |
+| Port | `80` |
+
+18. Click **Done**
+
+---
+
+## Finalize
+
+19. Click **Review and finalize**
+20. Verify backend and frontend summary
+21. Click **Create**
 ---
 
 ## Lab 3 — ALB for VM-Based Nginx App
