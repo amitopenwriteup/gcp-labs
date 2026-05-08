@@ -217,7 +217,7 @@ gcloud storage ls --recursive gs://[BUCKET_NAME] | sed 's|gs://|https://storage.
 ### Step 6 — Create Lifecycle Rule: Clean Up Incomplete Uploads
 
 1. **Add another Rule**
-2. **Action:** Abort incomplete multipart uploads
+2. **Action:** Delete multi-part upload
 3. **Conditions:**
    - Age: `7` days
 4. Click **Continue** → Review → **Create**
@@ -232,7 +232,7 @@ Your **Lifecycle** tab should now show 3 rules:
 |---|---|---|
 | Transition to Coldline | Set storage class: Coldline | Age ≥ 30 days, Class = Standard |
 | Auto-delete | Delete object | Age ≥ 365 days |
-| Cleanup incomplete uploads | Abort multipart | Age ≥ 7 days |
+| Delete multi-part upload | Abort multipart | Age ≥ 7 days |
 
 ---
 
