@@ -119,15 +119,7 @@ To view all revisions:
 9. Click **Save**
 10. To promote to 100%, repeat and set the new revision to `100%`
 
-#### Ingress controls
 
-1. Open your service, click **Edit & Deploy New Revision**
-2. Click the **Networking** tab
-3. Under **Ingress**, choose:
-   - **All** — accessible from the public internet
-   - **Internal** — accessible only from within your VPC or other Cloud Run services
-   - **Internal and Cloud Load Balancing** — internal plus via a load balancer
-4. Click **Deploy**
 
 ---
 
