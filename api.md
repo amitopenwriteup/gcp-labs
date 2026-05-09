@@ -1,645 +1,714 @@
-# Apigee API Management — Workshop Lab Guide
-
-**EduRamp Learning Services**
+#  Apigee on GCP — Beginner's 2-Hour Workshop
+### EduRamp Learning Services | Hands-On Lab Guide
 
 ---
 
-| Detail | Info |
-|---|---|
-| **Level** | Beginner to Intermediate |
-| **Duration** | ~4 Hours |
-| **Platform** | Google Cloud — Apigee X |
-| **Format** | Concept + Hands-on Lab |
+> **Audience:** Absolute beginners with a GCP account  
+> **Duration:** 2 Hours  
+> **Format:** Instructor-led with hands-on lab  
+> **Pre-req:** A GCP project with billing enabled, browser open to [console.cloud.google.com](https://console.cloud.google.com)
 
 ---
 
 ## Workshop Agenda
 
-| Module | Topic | Duration |
-|---|---|---|
-| 1 | Apigee Architecture & Concepts | 45 min |
-| 2 | API Proxy Development | 60 min |
-| 3 | Security & Monitoring | 45 min |
-| 4 | Hands-on Lab: Migrate Sample APIs to Apigee | 60 min |
+| Time | Segment | Topic |
+|------|---------|-------|
+| 0:00 – 0:10 | Intro | What is Apigee? Why do we need it? |
+| 0:10 – 0:35 | Module 1 | Apigee Architecture & Core Concepts |
+| 0:35 – 1:05 | Module 2 | API Proxy Development (hands-on) |
+| 1:05 – 1:30 | Module 3 | Security & Monitoring |
+| 1:30 – 1:55 | Lab | Migrating a Sample API to Apigee |
+| 1:55 – 2:00 | Wrap-up | Q&A and Next Steps |
 
 ---
 
-## Prerequisites
+## Learning Objectives
 
-- GCP account with an active project
-- Apigee X provisioned (or Apigee Eval org)
-- Basic understanding of REST APIs
-- A browser — all steps are done via the Apigee UI
+By the end of this workshop, you will be able to:
 
-### Enable Required APIs
-
-In GCP Console search bar, enable these one by one:
-
-| API | Search Term |
-|---|---|
-| Apigee API | `Apigee` |
-| Cloud DNS API | `Cloud DNS` |
-| Compute Engine API | `Compute Engine` |
+- Explain Apigee's role as an API management platform on GCP
+- Navigate the Apigee UI in the Google Cloud Console
+- Create a basic API proxy from scratch
+- Apply conditional logic and use flow variables
+- Implement basic API key security
+- Read the Apigee analytics dashboard
+- Debug a failing API using the Trace tool
 
 ---
 
-# Module 1: Apigee Architecture & Concepts
+## ⏱ MODULE 1 — Apigee Architecture & Core Concepts (25 min)
 
-## 1.1 What is Apigee?
+### 1.1 What Is Apigee? (5 min)
 
-Apigee is Google Cloud's **API Management Platform**. It sits between your API consumers (apps, clients) and your backend services, acting as a **gateway** that handles security, traffic management, analytics, and transformation.
+Apigee is GCP's **API Management platform**. Think of it as the front door to your backend services — it sits between your API consumers (apps, partners, developers) and your backend (Cloud Run, GKE, VMs, databases, etc.).
 
-```
-  API Consumer          Apigee Gateway            Backend Service
-  (Mobile App)  ──────▶  API Proxy     ──────▶   (Your REST API /
-  (Web App)              - Security               Database /
-  (Partner)              - Rate Limit             Microservice)
-                         - Analytics
-                         - Transform
-```
+**Why use Apigee?**
 
----
-
-## 1.2 API Proxy Fundamentals
-
-An **API Proxy** is the core building block of Apigee. It is a lightweight wrapper around your backend API that adds policies and logic **without changing your backend code**.
-
-### Key Concepts
-
-| Concept | Description |
-|---|---|
-| **API Proxy** | The facade that sits in front of your backend |
-| **Proxy Endpoint** | The URL that clients call (Apigee-side) |
-| **Target Endpoint** | The backend URL that Apigee calls |
-| **Flow** | The processing pipeline (Request → Target → Response) |
-| **Policy** | A reusable unit of logic (auth, transform, rate limit) |
-
-### How a Request Flows
+- Security: authenticate and authorize every API call
+- Traffic management: rate limiting, quotas, spike arrest
+- Observability: analytics, logging, monitoring
+- Developer experience: developer portals, documentation
+- Transformation: change request/response formats on the fly
 
 ```
-Client Request
-      │
-      ▼
- Proxy Endpoint  ──▶  Request Flow (Pre-processing)
-                              │
-                              ▼
-                       Target Endpoint  ──▶  Backend API
-                              │
-                              ▼
-                       Response Flow (Post-processing)
-                              │
-                              ▼
-                       Client Response
+Client App
+    │
+    ▼
+[ Apigee API Proxy ]  ◄── Policies (security, transform, analytics)
+    │
+    ▼
+[ Your Backend Service ]  (Cloud Run / GKE / on-prem / etc.)
 ```
 
 ---
 
-## 1.3 Target Servers and Virtual Hosts
+### 1.2 Core Concepts You Must Know (10 min)
 
-### Target Servers
+#### API Proxy
 
-A **Target Server** is a named reference to a backend URL. Instead of hardcoding `https://api.mybackend.com` in every proxy, you register it once as a Target Server and reference it by name.
+An **API proxy** is the core Apigee building block. It is a facade that:
 
-**Benefits:**
-- Change backend URL in one place
-- Enable load balancing across multiple backends
-- Toggle backends per environment (dev / staging / prod)
+1. Accepts incoming requests from clients
+2. Applies policies (security, transformation, logging)
+3. Forwards the request to a **target backend**
+4. Returns the (optionally modified) response to the client
 
-**Creating a Target Server in the UI:**
+A proxy decouples your public API from your backend — change the backend without impacting the consumer.
 
-1. Go to **Apigee Console → Admin → Environments**
-2. Select your environment (e.g., `eval`)
-3. Click **Target Servers → + Add**
-4. Fill in:
-   - **Name:** `my-backend`
-   - **Host:** `api.mybackend.com`
-   - **Port:** `443`
-   - **SSL:** Enabled
-5. Click **Add**
+#### Target Server
 
-### Virtual Hosts
-
-A **Virtual Host** defines how Apigee listens for incoming client traffic — the hostname and port that clients use to reach your API proxy.
-
-| Component | Example |
-|---|---|
-| Hostname | `api.mycompany.com` |
-| Port | `443` |
-| Protocol | HTTPS |
-| Base Path | `/v1` |
-
-> In **Apigee X**, virtual hosts are managed through **Apigee Environment Groups** linked to a load balancer hostname.
-
----
-
-## 1.4 Apigee Runtime and Management Components
-
-### Architecture Overview
+A **Target Server** is a named reference to a backend endpoint. Instead of hardcoding `https://my-backend.run.app` in every proxy, you register it as a Target Server named `my-backend-prod`. This makes environment promotion (dev → staging → prod) seamless.
 
 ```
-┌─────────────────────────────────────────────────┐
-│               Management Plane                  │
-│  (Apigee Console, API, Config, Analytics UI)    │
-└───────────────────┬─────────────────────────────┘
-                    │ Deploy / Config Sync
-┌───────────────────▼─────────────────────────────┐
-│                Runtime Plane                    │
-│  ┌────────────────────────────────────────────┐ │
-│  │  Message Processor  │  Router / MP Cluster │ │
-│  └────────────────────────────────────────────┘ │
-│              (Handles live traffic)             │
-└───────────────────┬─────────────────────────────┘
-                    │ Calls
-┌───────────────────▼─────────────────────────────┐
-│              Backend Services                   │
-│         (Your APIs / Microservices)             │
-└─────────────────────────────────────────────────┘
+Target Server "payments-api":
+  Host: payments.internal.mycompany.com
+  Port: 443
+  SSL: Enabled
 ```
+
+#### Virtual Host / Environment Group
+
+- An **Environment** (e.g., `dev`, `prod`) is an isolated runtime context.
+- An **Environment Group** maps a hostname to one or more environments.
+- Example: `api.mycompany.com` → routes to the `prod` environment.
+
+#### Apigee Runtime vs Management
 
 | Component | Role |
-|---|---|
-| **Management Plane** | Where you build, configure, and deploy proxies |
-| **Runtime Plane** | Where live API traffic is processed |
-| **Message Processor** | Executes policy logic on each request/response |
-| **Router** | Routes incoming traffic to the correct proxy |
-| **Analytics** | Collects and reports traffic data |
+|-----------|------|
+| **Runtime (Data Plane)** | Processes actual API traffic; executes policies |
+| **Management (Control Plane)** | Where you design, deploy, and configure proxies via the UI or API |
+
+In **Apigee X** (the GCP-native version), the runtime runs inside your VPC or is Google-managed. The management plane is the GCP Console.
+
+#### Policies
+
+Policies are reusable units of logic you attach to a proxy. They require **zero code**. Examples:
+
+| Policy | What it does |
+|--------|-------------|
+| `VerifyAPIKey` | Validates an API key in the request |
+| `OAuthV2` | OAuth 2.0 token validation |
+| `SpikeArrest` | Limits sudden traffic spikes |
+| `Quota` | Enforces usage limits per key/app |
+| `JSONToXML` | Transforms request/response format |
+| `AssignMessage` | Modifies headers, body, path |
+| `ServiceCallout` | Calls an external service mid-flow |
+| `RaiseFault` | Returns a custom error response |
 
 ---
 
-# Module 2: API Proxy Development
+### 1.3 Runtime Components — The Request Lifecycle (10 min)
 
-## 2.1 Creating Your First API Proxy (UI)
+Every API call through Apigee follows this path:
 
-1. Open **Apigee Console** → [apigee.google.com](https://apigee.google.com)
-2. Select your organization
-3. Click **Develop → API Proxies → + Create**
-4. Select **Reverse Proxy (most common)**
-5. Fill in:
+```
+Client
+  │
+  │  HTTP Request
+  ▼
+[ ProxyEndpoint ]
+  │
+  ├── PreFlow (always runs)
+  ├── Conditional Flows (match on path/verb)
+  └── PostFlow (always runs)
+  │
+  │  (request forwarded to backend)
+  ▼
+[ TargetEndpoint ]
+  │
+  ├── PreFlow
+  ├── Conditional Flows
+  └── PostFlow
+  │
+  │  HTTP Response
+  ▼
+Client
+```
 
-| Field | Value |
-|---|---|
-| Proxy Name | `hello-proxy` |
-| Base Path | `/hello` |
-| Target URL | `https://httpbin.org/get` |
+**Two sides of every flow:**
 
-6. Click **Next → Next → Create and Deploy**
-7. Once deployed, click the proxy URL to test it
+- **Request side** — from client to backend
+- **Response side** — from backend back to client
+
+**Two endpoints:**
+
+- **ProxyEndpoint** — where client connects; you define the URL path here
+- **TargetEndpoint** — where Apigee calls your backend
 
 ---
 
-## 2.2 Request and Response Flows
+## ⏱ MODULE 2 — API Proxy Development (30 min)
 
-Every API proxy has a **4-stage flow pipeline**:
+### 2.1 Opening Apigee in the GCP Console (5 min)
+
+**Step-by-step:**
+
+1. Open [console.cloud.google.com](https://console.cloud.google.com)
+2. In the top search bar, type **Apigee** → click **Apigee API Management**
+3. If prompted, enable the Apigee API
+4. You will land on the **Apigee Overview** page
+
+>  **Tip:** Bookmark `console.cloud.google.com/apigee` for quick access.
+
+**Key navigation areas in the left sidebar:**
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                    PROXY ENDPOINT                        │
-│                                                          │
-│  ┌──────────────┐              ┌───────────────────────┐ │
-│  │ Request Flow │              │    Response Flow      │ │
-│  │              │              │                       │ │
-│  │ PreFlow      │              │ PostFlow              │ │
-│  │ Conditional  │              │ Conditional           │ │
-│  │ Flow         │              │ Flow                  │ │
-│  │ PostFlow     │              │ PreFlow               │ │
-│  └──────┬───────┘              └──────────┬────────────┘ │
-└─────────┼────────────────────────────────┼──────────────┘
-          │                                │
-┌─────────▼────────────────────────────────▼──────────────┐
-│                   TARGET ENDPOINT                        │
-│  ┌──────────────┐              ┌───────────────────────┐ │
-│  │ Request Flow │──▶ Backend ─▶│    Response Flow      │ │
-│  └──────────────┘              └───────────────────────┘ │
-└──────────────────────────────────────────────────────────┘
+Apigee
+ ├── Overview
+ ├── API Proxies          ← Where you build and deploy proxies
+ ├── API Products         ← Package proxies for developers
+ ├── Apps                 ← Developer apps & API keys
+ ├── Environments         ← dev, staging, prod
+ ├── Environment Groups   ← Hostname routing
+ ├── Target Servers       ← Named backend references
+ ├── Analytics
+ │    ├── API Metrics
+ │    └── Reports
+ └── Debug (Trace)        ← Live traffic debugging
 ```
-
-### Flow Types
-
-| Flow | When It Runs |
-|---|---|
-| **PreFlow** | Always runs first — good for auth checks |
-| **Conditional Flow** | Runs only when a condition is true (e.g., path = `/users`) |
-| **PostFlow** | Always runs last — good for logging |
-| **PostClientFlow** | Runs after response is sent to client (logging only) |
-
-### Adding a Policy to a Flow (UI)
-
-1. Open your proxy → Click **Develop** tab
-2. In the flow diagram, click the **+ Step** button on the Request flow
-3. Select a policy (e.g., **Assign Message**)
-4. Give it a name and click **Add**
-5. Edit the XML config in the editor panel
-6. Click **Save → Deploy**
 
 ---
 
-## 2.3 Conditional Logic and Flow Variables
+### 2.2 Creating Your First API Proxy (15 min)
 
-### Conditions
+We will create a proxy for a free public API: `https://jsonplaceholder.typicode.com/todos`
 
-Conditions control whether a flow or policy executes. They use **flow variables** — key-value pairs automatically populated by Apigee.
+**Step 1 — Navigate to API Proxies**
 
-**Condition syntax:**
+1. Click **API Proxies** in the left menu
+2. Click **+ CREATE** (top right)
 
-```xml
-<Condition>request.verb = "GET" AND proxy.pathsuffix MatchesPath "/users/*"</Condition>
+**Step 2 — Choose Proxy Type**
+
+Select **Reverse proxy (most common)** → click **Next**
+
+**Step 3 — Configure the Proxy**
+
+Fill in the form:
+
+| Field | Value to enter |
+|-------|---------------|
+| Proxy Name | `my-first-proxy` |
+| Base Path | `/todos` |
+| Target (Existing API) | `https://jsonplaceholder.typicode.com/todos` |
+| Description | `My first Apigee proxy — todos API` |
+
+Click **Next**
+
+**Step 4 — Security (skip for now)**
+
+Select **Pass through (none)** → click **Next**
+
+**Step 5 — Deploy**
+
+- Check the box next to your `eval` or `dev` environment
+- Click **Create and Deploy**
+
+> ⏳ Wait ~30 seconds for deployment to complete. You'll see a green checkmark.
+
+**Step 6 — Test It!**
+
+1. Click on your proxy name `my-first-proxy`
+2. Go to the **Overview** tab, copy the **Proxy URL**
+3. Open a new browser tab, paste the URL and append `/todos`
+4. You should see a JSON list of todos from the backend!
+
+---
+
+### 2.3 Request & Response Flows (5 min)
+
+Now let's explore the proxy internals.
+
+**Step 1 — Open the Proxy Editor**
+
+1. Inside your proxy, click the **Develop** tab
+2. You'll see a visual flow editor with:
+   - **ProxyEndpoint** on the left
+   - **TargetEndpoint** on the right
+   - **Request** (top half) and **Response** (bottom half)
+
+**Flow structure explained:**
+
+```
+ProxyEndpoint — Request
+  ├── PreFlow         (always first)
+  ├── /todos GET      (conditional flow — matches GET /todos)
+  └── PostFlow        (always last)
+
+TargetEndpoint — Request
+  └── PreFlow
+
+[Backend called here]
+
+TargetEndpoint — Response
+  └── PostFlow
+
+ProxyEndpoint — Response
+  └── PostFlow        (always last before client)
 ```
 
-### Common Flow Variables
+**Step 2 — Add a Simple Policy**
 
-| Variable | Value Example | Description |
-|---|---|---|
-| `request.verb` | `GET`, `POST` | HTTP method |
-| `request.path` | `/v1/users/123` | Full request path |
-| `proxy.pathsuffix` | `/users/123` | Path after base path |
-| `request.header.content-type` | `application/json` | Request header |
-| `response.status.code` | `200`, `404` | Backend response code |
-| `system.time` | `1714000000` | Current timestamp |
+Let's add a response header so clients know the request passed through Apigee.
 
-### Example: Conditional Flow
+1. In the **Response PostFlow** of the ProxyEndpoint, click **+ Step**
+2. Select **Assign Message** → name it `AM-AddProxyHeader` → click **Add**
+3. In the XML editor that appears, replace the content with:
 
 ```xml
-<!-- In ProxyEndpoint flows — only runs for GET /products -->
-<Flow name="GetProducts">
-  <Condition>
-    request.verb = "GET" AND proxy.pathsuffix MatchesPath "/products"
-  </Condition>
-  <Request>
-    <Step><Name>Verify-API-Key</Name></Step>
-  </Request>
-  <Response>
-    <Step><Name>Add-CORS-Headers</Name></Step>
-  </Response>
-</Flow>
-```
-
-### Setting a Custom Flow Variable (Assign Message Policy)
-
-```xml
-<AssignMessage name="Set-Custom-Variable">
-  <AssignVariable>
-    <Name>my.custom.variable</Name>
-    <Value>hello-world</Value>
-  </AssignVariable>
-  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+<AssignMessage name="AM-AddProxyHeader">
+  <Add>
+    <Headers>
+      <Header name="X-Powered-By">Apigee</Header>
+    </Headers>
+  </Add>
+  <AssignTo createNew="false" transport="http" type="response"/>
 </AssignMessage>
 ```
 
+4. Click **Save** (top right) → then **Deploy**
+
 ---
 
-# Module 3: Security & Monitoring
+### 2.4 Conditional Logic & Flow Variables (5 min)
 
-## 3.1 API Security Best Practices
+**Flow Variables** are key-value pairs that exist during a transaction. Apigee auto-populates many:
 
-### Common Security Policies in Apigee
+| Variable | Contains |
+|----------|---------|
+| `request.verb` | HTTP method: GET, POST, etc. |
+| `request.path` | URL path: `/todos/1` |
+| `request.header.content-type` | A specific request header |
+| `response.status.code` | The backend's HTTP status code |
+| `client.ip` | Caller's IP address |
 
-| Policy | Purpose | When to Use |
-|---|---|---|
-| **Verify API Key** | Validates client API keys | Public APIs with registered apps |
-| **OAuth 2.0** | Token-based authorization | Enterprise / partner APIs |
-| **JWT Validation** | Validates JSON Web Tokens | Microservices, SSO |
-| **IP Allowlist** | Restricts by IP address | Internal APIs |
-| **Quota** | Limits calls per time window | Prevent abuse |
-| **Spike Arrest** | Limits burst traffic | Protect backend from spikes |
-| **Threat Protection** | Blocks malicious payloads | Public-facing APIs |
+**Using a Condition:**
 
-### Adding API Key Verification (UI)
+Add logic to only apply a policy when a condition is true. Example — only allow GET requests:
 
-1. Open your proxy → **Develop** tab
-2. Click **+ Step** on **PreFlow → Request**
-3. Search for and select **Verify API Key**
-4. Set the key location:
+1. In the proxy editor, click **+ Flow** under ProxyEndpoint
+2. Name it `Block-Non-GET`
+3. Set the condition:
+
+```
+request.verb != "GET"
+```
+
+4. Attach a **RaiseFault** policy inside this flow:
 
 ```xml
-<VerifyAPIKey name="Verify-API-Key">
+<RaiseFault name="RF-MethodNotAllowed">
+  <FaultResponse>
+    <Set>
+      <StatusCode>405</StatusCode>
+      <ReasonPhrase>Method Not Allowed</ReasonPhrase>
+      <Payload contentType="application/json">
+        {"error": "Only GET is supported on this proxy"}
+      </Payload>
+    </Set>
+  </FaultResponse>
+  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+</RaiseFault>
+```
+
+5. Save and deploy. Try a POST request — you'll get a 405!
+
+---
+
+## ⏱ MODULE 3 — Security & Monitoring (25 min)
+
+### 3.1 API Security Best Practices (10 min)
+
+#### API Key Validation (most common starting point)
+
+**How it works:**
+
+1. You create an **API Product** (bundles one or more proxies)
+2. A developer registers an **App** and gets an API key
+3. The client passes the key in the request: `?apikey=abc123`
+4. Apigee's `VerifyAPIKey` policy validates it automatically
+
+**Adding API Key security to your proxy:**
+
+1. In the proxy editor, go to **ProxyEndpoint → Request PreFlow**
+2. Click **+ Step** → select **Verify API Key**
+3. Name it `VAK-CheckKey` → click **Add**
+4. The default XML is sufficient:
+
+```xml
+<VerifyAPIKey name="VAK-CheckKey">
   <APIKey ref="request.queryparam.apikey"/>
 </VerifyAPIKey>
 ```
 
-5. Click **Save → Deploy**
+5. Save and deploy
 
-Now all requests to this proxy must include `?apikey=YOUR_KEY`.
+>  Now, any request without a valid `?apikey=` will receive a **401 Unauthorized**.
 
-### Spike Arrest Policy (Rate Limiting)
+#### Other Security Layers to Know
 
-```xml
-<SpikeArrest name="Spike-Arrest">
-  <Rate>10ps</Rate>  <!-- 10 requests per second max -->
-</SpikeArrest>
-```
+| Mechanism | Use Case |
+|-----------|---------|
+| **OAuth 2.0** | Token-based auth for user-facing APIs |
+| **Spike Arrest** | Prevent traffic spikes: `<Rate>30ps</Rate>` (30 per second) |
+| **Quota** | Business-level limits: 1000 calls/day per API key |
+| **IP Allowlist/Blocklist** | `<AccessControl>` policy filters by IP range |
+| **TLS/HTTPS** | Always enforce HTTPS on virtual hosts (default in Apigee X) |
+| **Threat Protection** | `<JSONThreatProtection>` blocks oversized/malformed payloads |
 
-| Rate Format | Meaning |
-|---|---|
-| `10ps` | 10 per second |
-| `100pm` | 100 per minute |
-
----
-
-## 3.2 Analytics and Monitoring Dashboards
-
-### Accessing Analytics in the UI
-
-1. Go to **Apigee Console → Analyze → API Metrics**
-2. Select your **environment** and **proxy**
-3. Set the time range (last 1 hour / 24 hours / 7 days)
-
-### Key Dashboards
-
-| Dashboard | What It Shows |
-|---|---|
-| **API Proxy Performance** | Traffic volume, latency, error rates per proxy |
-| **Cache Performance** | Cache hit/miss ratio |
-| **Error Code Analysis** | 4xx and 5xx breakdown |
-| **Target Performance** | Backend response time and error rate |
-| **Developer Engagement** | Which apps are calling which APIs |
-
-### Metrics to Monitor
-
-| Metric | Healthy Range | Alert If |
-|---|---|---|
-| Total Traffic | — | Sudden drop (possible outage) |
-| Error Rate | < 1% | > 5% |
-| p99 Latency | < 500ms | > 2000ms |
-| Policy Error Rate | < 0.5% | > 2% |
-| Target Availability | > 99.9% | < 99% |
-
----
-
-## 3.3 Debugging and Troubleshooting
-
-### Using the Apigee Debug Tool (Trace)
-
-The **Trace** tool lets you watch a live request flow through your proxy step by step.
-
-**How to use:**
-
-1. Open your proxy → Click **Debug** tab
-2. Select your **environment** and **revision**
-3. Click **Start Trace Session**
-4. Send a request to your proxy URL
-5. Click the request in the trace panel
-6. Step through each policy to inspect:
-   - Flow variables at each stage
-   - Policy inputs and outputs
-   - Headers and body transformations
-   - Errors and their root cause
-
-### Reading a Trace
+**Security layering (best practice):**
 
 ```
-Request Received
-      │
-      ▼
-  ✅ Verify-API-Key      ← Green = passed
-      │
-      ▼
-  ✅ Spike-Arrest        ← Green = passed
-      │
-      ▼
-  ➡  Send to Target      ← Arrow = forwarded to backend
-      │
-      ▼
-  ✅ Assign-Response     ← Green = passed
-      │
-      ▼
-Response Sent to Client
+Request → [TLS] → [IP Filter] → [API Key / OAuth] → [Quota] → [Threat Protection] → Backend
 ```
 
-> A **red step** in the trace means a policy raised a fault — click it to see the error code and message.
-
-### Common Errors and Fixes
-
-| Error Code | Meaning | Fix |
-|---|---|---|
-| `401 - Invalid API Key` | Key missing or wrong | Check `?apikey=` param |
-| `429 - Spike Arrest Violation` | Too many requests | Reduce request rate |
-| `500 - Script error` | JS policy syntax error | Check JavaScript policy code |
-| `503 - Backend unavailable` | Target server down | Check Target Server config |
-| `policies.ratelimit.QuotaViolation` | Quota exceeded | Wait or increase quota limit |
+Apply policies from the outside in — block unauthorized traffic as early as possible.
 
 ---
 
-# Module 4: Hands-on Lab — Migrating Sample APIs to Apigee
+### 3.2 Analytics & Monitoring Dashboards (10 min)
 
-## Lab Overview
+#### Accessing Analytics
 
-In this lab you will take a simple public REST API and migrate it behind an Apigee proxy with security, rate limiting, and response transformation.
+1. In the left menu, click **Analytics → API Metrics**
+2. Select your **environment** (e.g., `eval`)
+3. Set a time range (last 1 hour)
 
-**Backend API used:** `https://jsonplaceholder.typicode.com` (free public mock API)
+**Key metrics on the dashboard:**
 
-**Time:** ~60 minutes
+| Metric | What it tells you |
+|--------|------------------|
+| **Traffic** | Total API calls over time |
+| **Error Rate** | % of 4xx/5xx responses |
+| **Latency (p50/p99)** | Median and tail response times |
+| **Top Proxies** | Which APIs receive the most traffic |
+| **Top Developers** | Which API keys are most active |
+| **Cache Hit Rate** | Efficiency of response caching |
+
+>  **Tip:** Spike in error rate + spike in latency usually means a backend issue, not an Apigee issue.
+
+#### Custom Reports
+
+1. Click **Analytics → Reports → + Create Report**
+2. Choose dimensions (proxy name, developer app) and metrics (traffic, latency)
+3. Schedule reports to be emailed to stakeholders daily
+
+#### Alerting with Cloud Monitoring
+
+Apigee X integrates with **Google Cloud Monitoring**:
+
+1. Go to **Cloud Monitoring → Alerting → + Create Policy**
+2. Select metric: `apigee.googleapis.com/proxy/request_count`
+3. Set threshold: alert if error rate > 5% for 5 minutes
+4. Add notification channel (email, PagerDuty, Slack)
 
 ---
 
-## Lab Step 1: Create the API Proxy
+### 3.3 Debugging with the Trace Tool (5 min)
 
-1. Go to **Apigee Console → Develop → API Proxies**
-2. Click **+ Create**
-3. Select **Reverse Proxy**
-4. Enter:
+The **Trace tool** is your best friend when something goes wrong.
+
+**How to use it:**
+
+1. Go to **API Proxies** → click your proxy
+2. Click the **Debug** tab
+3. Select your environment and revision
+4. Click **Start Trace Session**
+5. Send a request to your proxy URL in a new tab
+6. Watch the trace appear in real time!
+
+**Reading a trace:**
+
+```
+Client Request Received
+      │
+      ▼
+[PreFlow Request]
+  ├── VAK-CheckKey  (200ms)
+  ├── AM-AddProxyHeader  (1ms)
+  │
+      ▼
+[Target Request Sent] → jsonplaceholder.typicode.com
+      │
+      ▼
+[Target Response Received] 200 OK (340ms)
+      │
+      ▼
+[PostFlow Response]
+  └── AM-AddProxyHeader 
+      │
+      ▼
+Response Sent to Client (total: 545ms)
+```
+
+**Debugging tips:**
+
+- Click any policy step to inspect variables **before and after** it ran
+- Red step = policy threw a fault
+- Check `error.message` and `error.cause` flow variables
+- Use **Filter** to only capture requests matching a condition (e.g., a specific API key)
+
+---
+
+## ⏱ HANDS-ON LAB — Migrating a Sample API to Apigee (25 min)
+
+### Lab Overview
+
+In this lab, you will migrate a real sample API (`https://petstore3.swagger.io/api/v3`) to Apigee by creating a proxy, securing it, and testing it end to end.
+
+**What you'll build:**
+
+```
+Your Client
+    │ GET /pets/v3/pet/findByStatus?status=available&apikey=<key>
+    ▼
+[ Apigee Proxy: petstore-proxy ]
+    │ Verifies API Key
+    │ Strips apikey param before forwarding
+    │ Adds X-Request-ID header
+    ▼
+[ Backend: petstore3.swagger.io ]
+    │
+    ▼
+JSON response → back to client
+```
+
+---
+
+### Lab Step 1 — Create the Proxy (5 min)
+
+1. **API Proxies** → **+ CREATE** → **Reverse Proxy**
+2. Fill in:
 
 | Field | Value |
-|---|---|
-| Proxy Name | `users-api` |
-| Base Path | `/v1/users` |
-| Target URL | `https://jsonplaceholder.typicode.com/users` |
-| Description | Migrated users API |
+|-------|-------|
+| Proxy Name | `petstore-proxy` |
+| Base Path | `/pets/v3` |
+| Target URL | `https://petstore3.swagger.io/api/v3` |
 
-5. Click **Next → Next → Create and Deploy**
-6. Note the proxy URL shown — it looks like:
-   `https://YOUR_ENV_GROUP_HOSTNAME/v1/users`
+3. Security: **Pass through (none)** for now
+4. Deploy to your environment → **Create and Deploy**
+
+**Quick test:**
+
+```
+GET https://<your-apigee-host>/pets/v3/pet/findByStatus?status=available
+```
+
+You should get a JSON array of pets. 
 
 ---
 
-## Lab Step 2: Test the Proxy
+### Lab Step 2 — Add API Key Security (5 min)
 
-Open a browser or use a REST client and call:
-
-```
-GET https://YOUR_ENV_GROUP_HOSTNAME/v1/users
-```
-
-You should see a JSON array of 10 users returned from the backend through your proxy.
-
----
-
-## Lab Step 3: Add API Key Security
-
-1. Open the `users-api` proxy → **Develop** tab
-2. On the left panel, click **PreFlow** under **Proxy Endpoints**
-3. Click **+ Step** on the **Request** side
-4. Select **Verify API Key** → name it `verify-api-key` → click **Add**
-5. Update the policy XML:
+1. Open the proxy → **Develop** tab
+2. **ProxyEndpoint → Request PreFlow** → **+ Step**
+3. Add **Verify API Key** named `VAK-PetstoreKey`
 
 ```xml
-<VerifyAPIKey name="verify-api-key">
-  <APIKey ref="request.header.x-api-key"/>
+<VerifyAPIKey name="VAK-PetstoreKey">
+  <APIKey ref="request.queryparam.apikey"/>
 </VerifyAPIKey>
 ```
 
-6. Click **Save → Deploy**
+4. Now add a second step to **remove the apikey param** before it reaches the backend (security hygiene!):
 
-**Test it:**
-
-```bash
-# Without key — should return 401
-curl https://YOUR_ENV_GROUP_HOSTNAME/v1/users
-
-# With key — should return 200
-curl -H "x-api-key: YOUR_API_KEY" \
-     https://YOUR_ENV_GROUP_HOSTNAME/v1/users
-```
-
----
-
-## Lab Step 4: Add Rate Limiting
-
-1. Click **+ Step** on **PreFlow → Request** (after the API Key step)
-2. Select **Spike Arrest** → name it `spike-arrest` → click **Add**
-3. Set the config:
+Add **Assign Message** named `AM-RemoveApiKey`:
 
 ```xml
-<SpikeArrest name="spike-arrest">
-  <Rate>5ps</Rate>
-</SpikeArrest>
-```
-
-4. Click **Save → Deploy**
-
-> Now if a client sends more than 5 requests per second, Apigee returns `429 Too Many Requests` automatically.
-
----
-
-## Lab Step 5: Transform the Response
-
-Add a custom response header so clients can identify the gateway.
-
-1. Click **+ Step** on **PostFlow → Response**
-2. Select **Assign Message** → name it `add-gateway-header` → click **Add**
-3. Configure:
-
-```xml
-<AssignMessage name="add-gateway-header">
-  <Set>
-    <Headers>
-      <Header name="x-powered-by">Apigee</Header>
-      <Header name="x-request-id">{messageid}</Header>
-    </Headers>
-  </Set>
-  <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
-  <AssignTo createNew="false" type="response"/>
+<AssignMessage name="AM-RemoveApiKey">
+  <Remove>
+    <QueryParams>
+      <QueryParam name="apikey"/>
+    </QueryParams>
+  </Remove>
+  <AssignTo createNew="false" transport="http" type="request"/>
 </AssignMessage>
 ```
 
-4. Click **Save → Deploy**
-
-**Test:** Check the response headers — you should see `x-powered-by: Apigee`.
+5. Save and Deploy
 
 ---
 
-## Lab Step 6: Add a Conditional Flow for Single User
+### Lab Step 3 — Add a Request ID Header (5 min)
 
-1. In the **Develop** tab, click **+ Add Flow** under **Proxy Endpoints**
-2. Name the flow `GetSingleUser`
-3. Set the condition:
+Let's stamp every request with a unique ID for traceability.
 
-```xml
-<Condition>
-  request.verb = "GET" AND proxy.pathsuffix MatchesPath "/*"
-</Condition>
-```
-
-4. Update the Target URL to pass the user ID:
+1. In **ProxyEndpoint → Request PreFlow**, add **Assign Message** named `AM-AddRequestId`
 
 ```xml
-<!-- In Target Endpoint, update the path -->
-<HTTPTargetConnection>
-  <URL>https://jsonplaceholder.typicode.com/users</URL>
-</HTTPTargetConnection>
+<AssignMessage name="AM-AddRequestId">
+  <Add>
+    <Headers>
+      <Header name="X-Request-ID">{messageid}</Header>
+    </Headers>
+  </Add>
+  <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>
 ```
 
-5. Add a **JS Policy** to extract the user ID from the path and append it to the target:
+> `{messageid}` is a built-in Apigee flow variable — a unique UUID per request.
 
-```javascript
-// extract-user-id.js
-var pathSuffix = context.getVariable("proxy.pathsuffix");
-var userId = pathSuffix.replace("/", "");
-context.setVariable("target.url",
-  "https://jsonplaceholder.typicode.com/users/" + userId);
-```
+2. Save and Deploy
 
-6. Click **Save → Deploy**
+---
 
-**Test:**
+### Lab Step 4 — Create an API Product and Get a Key (5 min)
+
+1. Go to **API Products** → **+ CREATE**
+2. Fill in:
+
+| Field | Value |
+|-------|-------|
+| Name | `petstore-product` |
+| Display Name | `Petstore API` |
+| Environment | your `eval` or `dev` env |
+| Access | Public |
+
+3. Under **API Proxies**, click **+ ADD A PROXY** → select `petstore-proxy` → **Add**
+4. Click **Save**
+
+**Create an App:**
+
+1. Go to **Apps** → **+ CREATE**
+2. Fill in:
+
+| Field | Value |
+|-------|-------|
+| App Name | `my-test-app` |
+| Developer | (select or create one) |
+
+3. Under **Credentials**, click **+ ADD PRODUCT** → select `petstore-product` → **Add**
+4. Click **Create**
+5. After creation, click on the app → reveal the **Consumer Key** — this is your API key!
+
+---
+
+### Lab Step 5 — End-to-End Test (5 min)
+
+Test in your browser or with curl:
 
 ```bash
-# Get single user by ID
-curl -H "x-api-key: YOUR_KEY" \
-     https://YOUR_ENV_GROUP_HOSTNAME/v1/users/1
+# Replace with your actual values
+APIGEE_HOST="https://34.xxx.xxx.xxx.nip.io"  # Your Apigee environment group hostname
+API_KEY="your-consumer-key-here"
+
+curl "${APIGEE_HOST}/pets/v3/pet/findByStatus?status=available&apikey=${API_KEY}"
+```
+
+**Expected results:**
+
+| Test | Expected |
+|------|---------|
+| Valid API key | 200 OK with pet JSON |
+| No API key | 401 Unauthorized |
+| Wrong API key | 401 Unauthorized |
+| POST request (if you added the block) | 405 Method Not Allowed |
+
+**Verify with Trace:**
+
+1. Start a Trace session on `petstore-proxy`
+2. Send a request with a valid key
+3. Confirm in the trace:
+   - `VAK-PetstoreKey` → passed 
+   - `AM-RemoveApiKey` → `apikey` param removed 
+   - `AM-AddRequestId` → `X-Request-ID` header added 
+   - Backend response: 200 
+
+**Check Analytics:**
+
+1. Go to **Analytics → API Metrics**
+2. You should see your test traffic appear within ~2 minutes
+3. Spot your proxy `petstore-proxy` in the **Top Proxies** chart
+
+---
+
+## Wrap-Up & Next Steps (5 min)
+
+### What We Covered Today
+
+ Apigee's role as an API gateway on GCP  
+ Core concepts: proxy, target server, environment, virtual host, policies  
+ The request/response flow lifecycle  
+ Creating and deploying an API proxy from the GCP UI  
+ Conditional logic with flow variables  
+ API key security and policy layering  
+ Analytics dashboards and alerting  
+ Debugging with the Trace tool  
+ Full lab: migrating a real API to Apigee end-to-end  
+
+---
+
+### Common Mistakes to Avoid
+
+| Mistake | Fix |
+|---------|-----|
+| Forgetting to deploy after saving | Always click **Deploy** after **Save** |
+| Hardcoding backend URLs in proxies | Use **Target Servers** for portability |
+| Leaving `apikey` in the forwarded request | Always strip with `AssignMessage > Remove` |
+| Not testing 4xx scenarios | Always test invalid key, missing key, wrong method |
+| Ignoring latency in Trace | Backend slowness ≠ Apigee problem |
+
+---
+
+### Next Steps & Learning Path
+
+1. **Apigee Policies to explore next:**
+   - `OAuthV2` — full OAuth 2.0 flows
+   - `Quota` — call limits per developer
+   - `ResponseCache` — cache backend responses in Apigee
+   - `JavaScript / Python` — custom logic in policies
+
+2. **Apigee X features to explore:**
+   - Apigee Hub for API catalog
+   - Integrated Developer Portal
+   - Advanced API Security (WAAP)
+   - CI/CD with Apigee Maven Plugin or Apigee CLI (`apigeectl`)
+
+3. **Official Resources:**
+   - Docs: [cloud.google.com/apigee/docs](https://cloud.google.com/apigee/docs)
+   - Codelabs: [codelabs.developers.google.com](https://codelabs.developers.google.com) → search "Apigee"
+   - Sample proxies: [github.com/apigee/api-platform-samples](https://github.com/apigee/api-platform-samples)
+   - Certification: **Google Professional Cloud Developer** covers Apigee
+
+---
+
+## Quick Reference Card
+
+```
+CREATE PROXY:      API Proxies → + CREATE → Reverse Proxy
+EDIT PROXY:        API Proxies → [name] → Develop tab
+DEPLOY PROXY:      Develop tab → Save → Deploy button
+TRACE/DEBUG:       API Proxies → [name] → Debug tab
+VIEW ANALYTICS:    Analytics → API Metrics
+TARGET SERVERS:    Admin → Environments → Target Servers
+API PRODUCTS:      Publish → API Products
+APPS & KEYS:       Publish → Apps
 ```
 
 ---
 
-## Lab Step 7: Debug with Trace
-
-1. Open the proxy → Click **Debug** tab
-2. Click **Start Trace Session**
-3. Send a request to your proxy
-4. In the trace panel, click the request
-5. Walk through each step and verify:
-   - `verify-api-key` shows the key was validated
-   - `spike-arrest` shows the request was allowed
-   - `add-gateway-header` shows headers were added
-6. Try sending a request **without the API key** and observe the `401` fault in the trace
-
----
-
-## Lab Step 8: View Analytics
-
-1. Go to **Analyze → API Metrics**
-2. Select `users-api` from the proxy dropdown
-3. Set time range to **Last 1 Hour**
-4. Observe:
-   - Total traffic from your test calls
-   - Any 4xx errors from the unauthenticated test
-   - Average latency
-
----
-
-## Lab Complete ✅
-
-You have successfully:
-
-- Created an API proxy in front of a real backend
-- Added API Key security
-- Applied rate limiting with Spike Arrest
-- Transformed the response with custom headers
-- Added a conditional flow for dynamic routing
-- Debugged with the Trace tool
-- Reviewed live analytics
-
----
-
-## Quick Reference
-
-```
-┌──────────────────────────────────────────────────┐
-│             APIGEE POLICY CHEATSHEET             │
-├────────────────────┬─────────────────────────────┤
-│ Verify API Key     │ Auth via key in header/param │
-│ OAuth 2.0          │ Token-based auth             │
-│ Spike Arrest       │ Burst rate limiting          │
-│ Quota              │ Calls per day/month          │
-│ Assign Message     │ Set headers, body, variables │
-│ JavaScript         │ Custom logic                 │
-│ Extract Variables  │ Parse JSON/XML/path          │
-│ Service Callout    │ Call another API mid-flow    │
-│ Response Cache     │ Cache backend responses      │
-│ JSON Threat Prot.  │ Block malicious payloads     │
-└────────────────────┴─────────────────────────────┘
-```
-
----
-
-*EduRamp Learning Services — Apigee API Management Workshop*
-*Google Cloud | Apigee X | Beginner–Intermediate*
+*EduRamp Learning Services — Apigee on GCP Beginner Workshop v1.0*  
+*© 2024 EduRamp. For internal training use only.*
