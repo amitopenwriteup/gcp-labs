@@ -1,4 +1,4 @@
-The command you have looks correct! Here's the properly formatted `cbt set` command:
+ `cbt set` command:
 
 ```bash
 cbt set users user#user-042 \
