@@ -1,6 +1,6 @@
 # Cloud Run Workshop — GCP Console UI Guide
 
-**Duration:** ~3 hours  
+**Duration:** ~1 hours  
 **Level:** Intermediate  
 **Prerequisites:** A Google Cloud project with billing enabled, a GitHub account, basic understanding of containers and REST APIs
 
