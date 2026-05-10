@@ -1,25 +1,24 @@
-#  Apigee on GCP — Beginner's 2-Hour Workshop
+# Apigee on GCP — Beginner's 2-Hour Workshop
 ### EduRamp Learning Services | Hands-On Lab Guide
 
 ---
 
-> **Audience:** Absolute beginners with a GCP account  
-> **Duration:** 2 Hours  
-> **Format:** Instructor-led with hands-on lab  
+> **Audience:** Absolute beginners with a GCP account
+> **Format:** Instructor-led with hands-on lab
 > **Pre-req:** A GCP project with billing enabled, browser open to [console.cloud.google.com](https://console.cloud.google.com)
 
 ---
 
 ## Workshop Agenda
 
-| Time | Segment | Topic |
-|------|---------|-------|
-| 0:00 – 0:10 | Intro | What is Apigee? Why do we need it? |
-| 0:10 – 0:35 | Module 1 | Apigee Architecture & Core Concepts |
-| 0:35 – 1:05 | Module 2 | API Proxy Development (hands-on) |
-| 1:05 – 1:30 | Module 3 | Security & Monitoring |
-| 1:30 – 1:55 | Lab | Migrating a Sample API to Apigee |
-| 1:55 – 2:00 | Wrap-up | Q&A and Next Steps |
+| Segment | Topic |
+|---------|-------|
+| Intro | What is Apigee? Why do we need it? |
+| Module 1 | Apigee Architecture & Core Concepts |
+| Module 2 | API Proxy Development (hands-on) |
+| Module 3 | Security & Monitoring |
+| Lab (25 min) | Migrating a Sample API to Apigee |
+| Wrap-up | Q&A and Next Steps |
 
 ---
 
@@ -37,9 +36,9 @@ By the end of this workshop, you will be able to:
 
 ---
 
-## ⏱ MODULE 1 — Apigee Architecture & Core Concepts (25 min)
+## MODULE 1 — Apigee Architecture & Core Concepts
 
-### 1.1 What Is Apigee? (5 min)
+### 1.1 What Is Apigee?
 
 Apigee is GCP's **API Management platform**. Think of it as the front door to your backend services — it sits between your API consumers (apps, partners, developers) and your backend (Cloud Run, GKE, VMs, databases, etc.).
 
@@ -63,7 +62,7 @@ Client App
 
 ---
 
-### 1.2 Core Concepts You Must Know (10 min)
+### 1.2 Core Concepts You Must Know
 
 #### API Proxy
 
@@ -119,7 +118,7 @@ Policies are reusable units of logic you attach to a proxy. They require **zero 
 
 ---
 
-### 1.3 Runtime Components — The Request Lifecycle (10 min)
+### 1.3 Runtime Components — The Request Lifecycle
 
 Every API call through Apigee follows this path:
 
@@ -159,9 +158,9 @@ Client
 
 ---
 
-## ⏱ MODULE 2 — API Proxy Development (30 min)
+## MODULE 2 — API Proxy Development
 
-### 2.1 Opening Apigee in the GCP Console (5 min)
+### 2.1 Opening Apigee in the GCP Console
 
 **Step-by-step:**
 
@@ -170,7 +169,7 @@ Client
 3. If prompted, enable the Apigee API
 4. You will land on the **Apigee Overview** page
 
->  **Tip:** Bookmark `console.cloud.google.com/apigee` for quick access.
+> **Tip:** Bookmark `console.cloud.google.com/apigee` for quick access.
 
 **Key navigation areas in the left sidebar:**
 
@@ -191,7 +190,7 @@ Apigee
 
 ---
 
-### 2.2 Creating Your First API Proxy (15 min)
+### 2.2 Creating Your First API Proxy
 
 We will create a proxy for a free public API: `https://jsonplaceholder.typicode.com/todos`
 
@@ -226,7 +225,7 @@ Select **Pass through (none)** → click **Next**
 - Check the box next to your `eval` or `dev` environment
 - Click **Create and Deploy**
 
-> ⏳ Wait ~30 seconds for deployment to complete. You'll see a green checkmark.
+> Wait ~30 seconds for deployment to complete. You'll see a green checkmark.
 
 **Step 6 — Test It!**
 
@@ -237,7 +236,7 @@ Select **Pass through (none)** → click **Next**
 
 ---
 
-### 2.3 Request & Response Flows (5 min)
+### 2.3 Request & Response Flows
 
 Now let's explore the proxy internals.
 
@@ -292,7 +291,7 @@ Let's add a response header so clients know the request passed through Apigee.
 
 ---
 
-### 2.4 Conditional Logic & Flow Variables (5 min)
+### 2.4 Conditional Logic & Flow Variables
 
 **Flow Variables** are key-value pairs that exist during a transaction. Apigee auto-populates many:
 
@@ -337,9 +336,9 @@ request.verb != "GET"
 
 ---
 
-## ⏱ MODULE 3 — Security & Monitoring (25 min)
+## MODULE 3 — Security & Monitoring
 
-### 3.1 API Security Best Practices (10 min)
+### 3.1 API Security Best Practices
 
 #### API Key Validation (most common starting point)
 
@@ -365,7 +364,7 @@ request.verb != "GET"
 
 5. Save and deploy
 
->  Now, any request without a valid `?apikey=` will receive a **401 Unauthorized**.
+> Now, any request without a valid `?apikey=` will receive a **401 Unauthorized**.
 
 #### Other Security Layers to Know
 
@@ -388,7 +387,7 @@ Apply policies from the outside in — block unauthorized traffic as early as po
 
 ---
 
-### 3.2 Analytics & Monitoring Dashboards (10 min)
+### 3.2 Analytics & Monitoring Dashboards
 
 #### Accessing Analytics
 
@@ -407,7 +406,7 @@ Apply policies from the outside in — block unauthorized traffic as early as po
 | **Top Developers** | Which API keys are most active |
 | **Cache Hit Rate** | Efficiency of response caching |
 
->  **Tip:** Spike in error rate + spike in latency usually means a backend issue, not an Apigee issue.
+> **Tip:** Spike in error rate + spike in latency usually means a backend issue, not an Apigee issue.
 
 #### Custom Reports
 
@@ -426,7 +425,7 @@ Apigee X integrates with **Google Cloud Monitoring**:
 
 ---
 
-### 3.3 Debugging with the Trace Tool (5 min)
+### 3.3 Debugging with the Trace Tool
 
 The **Trace tool** is your best friend when something goes wrong.
 
@@ -457,7 +456,7 @@ Client Request Received
       │
       ▼
 [PostFlow Response]
-  └── AM-AddProxyHeader 
+  └── AM-AddProxyHeader
       │
       ▼
 Response Sent to Client (total: 545ms)
@@ -472,7 +471,7 @@ Response Sent to Client (total: 545ms)
 
 ---
 
-## ⏱ HANDS-ON LAB — Migrating a Sample API to Apigee (25 min)
+## HANDS-ON LAB (25 min) — Migrating a Sample API to Apigee
 
 ### Lab Overview
 
@@ -517,7 +516,7 @@ JSON response → back to client
 GET https://<your-apigee-host>/pets/v3/pet/findByStatus?status=available
 ```
 
-You should get a JSON array of pets. 
+You should get a JSON array of pets.
 
 ---
 
@@ -632,10 +631,10 @@ curl "${APIGEE_HOST}/pets/v3/pet/findByStatus?status=available&apikey=${API_KEY}
 1. Start a Trace session on `petstore-proxy`
 2. Send a request with a valid key
 3. Confirm in the trace:
-   - `VAK-PetstoreKey` → passed 
-   - `AM-RemoveApiKey` → `apikey` param removed 
-   - `AM-AddRequestId` → `X-Request-ID` header added 
-   - Backend response: 200 
+   - `VAK-PetstoreKey` — passed
+   - `AM-RemoveApiKey` — `apikey` param removed
+   - `AM-AddRequestId` — `X-Request-ID` header added
+   - Backend response: 200
 
 **Check Analytics:**
 
@@ -645,19 +644,19 @@ curl "${APIGEE_HOST}/pets/v3/pet/findByStatus?status=available&apikey=${API_KEY}
 
 ---
 
-## Wrap-Up & Next Steps (5 min)
+## Wrap-Up & Next Steps
 
 ### What We Covered Today
 
- Apigee's role as an API gateway on GCP  
- Core concepts: proxy, target server, environment, virtual host, policies  
- The request/response flow lifecycle  
- Creating and deploying an API proxy from the GCP UI  
- Conditional logic with flow variables  
- API key security and policy layering  
- Analytics dashboards and alerting  
- Debugging with the Trace tool  
- Full lab: migrating a real API to Apigee end-to-end  
+- Apigee's role as an API gateway on GCP
+- Core concepts: proxy, target server, environment, virtual host, policies
+- The request/response flow lifecycle
+- Creating and deploying an API proxy from the GCP UI
+- Conditional logic with flow variables
+- API key security and policy layering
+- Analytics dashboards and alerting
+- Debugging with the Trace tool
+- Full lab: migrating a real API to Apigee end-to-end
 
 ---
 
@@ -669,7 +668,7 @@ curl "${APIGEE_HOST}/pets/v3/pet/findByStatus?status=available&apikey=${API_KEY}
 | Hardcoding backend URLs in proxies | Use **Target Servers** for portability |
 | Leaving `apikey` in the forwarded request | Always strip with `AssignMessage > Remove` |
 | Not testing 4xx scenarios | Always test invalid key, missing key, wrong method |
-| Ignoring latency in Trace | Backend slowness ≠ Apigee problem |
+| Ignoring latency in Trace | Backend slowness does not equal an Apigee problem |
 
 ---
 
@@ -689,7 +688,7 @@ curl "${APIGEE_HOST}/pets/v3/pet/findByStatus?status=available&apikey=${API_KEY}
 
 3. **Official Resources:**
    - Docs: [cloud.google.com/apigee/docs](https://cloud.google.com/apigee/docs)
-   - Codelabs: [codelabs.developers.google.com](https://codelabs.developers.google.com) → search "Apigee"
+   - Codelabs: [codelabs.developers.google.com](https://codelabs.developers.google.com) — search "Apigee"
    - Sample proxies: [github.com/apigee/api-platform-samples](https://github.com/apigee/api-platform-samples)
    - Certification: **Google Professional Cloud Developer** covers Apigee
 
@@ -710,5 +709,5 @@ APPS & KEYS:       Publish → Apps
 
 ---
 
-*EduRamp Learning Services — Apigee on GCP Beginner Workshop v1.0*  
-*© 2024 EduRamp. For internal training use only.*
+*EduRamp Learning Services — Apigee on GCP Beginner Workshop v1.0*
+*For internal training use only.*
