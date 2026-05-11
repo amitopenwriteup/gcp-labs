@@ -115,7 +115,7 @@ The pipeline needs BigQuery write access but must not be able to delete tables. 
 **Checkpoint:** The role `pipelineDataLoader` appears in the Roles list with a **CUSTOM** badge. Open it and confirm exactly 5 permissions are listed and `bigquery.tables.delete` is not among them.
 
 ---
-
+## Part 4
 ### gcloud CLI
 
 Create a YAML file defining the custom role:
