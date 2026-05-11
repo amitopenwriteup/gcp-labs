@@ -115,7 +115,7 @@ The pipeline needs BigQuery write access but must not be able to delete tables. 
 **Checkpoint:** The role `pipelineDataLoader` appears in the Roles list with a **CUSTOM** badge. Open it and confirm exactly 5 permissions are listed and `bigquery.tables.delete` is not among them.
 
 ---
-## Part 4
+## Lab2 :Command line
 ### gcloud CLI
 
 Create a YAML file defining the custom role:
@@ -153,33 +153,7 @@ gcloud iam roles describe pipelineDataLoader \
 
 ---
 
-## Part 3 — Create a Service Account
 
-Create a dedicated service account for the data pipeline. This account represents the pipeline's identity in GCP.
-
----
-
-### Console UI
-
-1. Go to **IAM & Admin > Service Accounts**.
-2. Click **+ CREATE SERVICE ACCOUNT**.
-3. Fill in Step 1 — Service account details:
-
-   | Field | Value |
-   |---|---|
-   | Service account name | `Data Pipeline Loader` |
-   | Service account ID | `data-pipeline-loader` |
-   | Description | `Service account for the BigQuery data loading pipeline` |
-
-4. Click **CREATE AND CONTINUE**.
-5. Skip Step 2 (Grant this service account access to project) for now — you will assign roles in Part 4.
-6. Click **CONTINUE**.
-7. Skip Step 3 (Grant users access to this service account).
-8. Click **DONE**.
-
-**Checkpoint:** The service account `data-pipeline-loader@YOUR_PROJECT_ID.iam.gserviceaccount.com` appears in the Service Accounts list.
-
----
 
 ### gcloud CLI
 
@@ -213,40 +187,6 @@ Assign two roles to the service account:
 
 ---
 
-### Console UI
-
-**Assign the custom role:**
-
-1. Go to **IAM & Admin > IAM**.
-2. Click **+ GRANT ACCESS**.
-3. In the **New principals** field, type:
-   ```
-   data-pipeline-loader@YOUR_PROJECT_ID.iam.gserviceaccount.com
-   ```
-4. Click the **Select a role** dropdown and type `Pipeline Data Loader`.
-5. Select **Custom > Pipeline Data Loader** from the results.
-6. Click **+ ADD ANOTHER ROLE**.
-7. In the new role dropdown, type `Storage Object Viewer` and select **Cloud Storage > Storage Object Viewer**.
-8. Click **SAVE**.
-
-**Checkpoint:** The IAM table now shows `data-pipeline-loader@...` with two role bindings: `Pipeline Data Loader` and `Storage Object Viewer`.
-
-**Verify with Policy Troubleshooter:**
-
-1. Go to **IAM & Admin > Policy Troubleshooter**.
-2. Set the following and click **CHECK ACCESS**:
-
-   | Field | Value |
-   |---|---|
-   | Principal | `data-pipeline-loader@YOUR_PROJECT_ID.iam.gserviceaccount.com` |
-   | Resource | your project |
-   | Permission | `bigquery.tables.updateData` |
-
-   Expected result: **Access is granted**
-
-3. Run a second check with permission `bigquery.tables.delete`.
-
-   Expected result: **Access is denied**
 
 ---
 
