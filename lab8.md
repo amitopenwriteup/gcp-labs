@@ -61,7 +61,7 @@
 | Field | Value |
 |-------|-------|
 | Instance group | *(select your existing MIG/IG)* |
-| Port numbers | `8080` |
+| Port numbers | `80` |
 | Balancing mode | `Utilization` |
 
 ---
