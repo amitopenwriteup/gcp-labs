@@ -74,7 +74,7 @@
 |-------|-------|
 | Name | `api-health-check` |
 | Protocol | `HTTP` |
-| Port | `8080` |
+| Port | `80` |
 | Request path | `/` |
 | Check interval | `10s` |
 | Healthy threshold | `2` |
@@ -111,8 +111,7 @@
 
 **Test:**
 ```
-http://<FRONTEND_IP>/api/health
-```
+http://<FRONTEND_IP>/
 
 ---
 
