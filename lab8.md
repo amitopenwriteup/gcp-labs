@@ -239,9 +239,9 @@ gcloud compute backend-services get-health api-backend-service --global
 gcloud compute backend-services get-health nlb-backend-service --global
 
 # Test ALB endpoint
-LB_IP=$(gcloud compute forwarding-rules describe api-alb-forwarding-rule \
-  --global --format="value(IPAddress)")
-curl -s http://$LB_IP/api/health | python3 -m json.tool
+LB_IP=$(gcloud compute forwarding-rules describe api-frontend-karthik --global \
+  --format="value(IPAddress)")
+curl -s http://$LB_IP/ 
 
 # Test NLB endpoint
 NLB_IP=$(gcloud compute forwarding-rules describe api-nlb-forwarding-rule \
