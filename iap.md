@@ -1,8 +1,8 @@
 # GCP Lab: Nginx VM with Identity-Aware Proxy and Zero Trust Networking
 
 **Level:** Intermediate  
-**Duration:** 90 minutes  
-**Prerequisites:** A GCP project with billing enabled, Owner or Editor IAM role  
+**Duration:** 75 minutes  
+**Prerequisites:** A GCP project with billing enabled, Owner or Editor IAM role, existing VPC network
 
 ---
 
@@ -12,11 +12,10 @@ In this lab you will deploy a Compute Engine VM running Nginx, lock down all dir
 
 **What you will build:**
 
-- A VPC network with no default internet ingress
-- A Compute Engine VM running Nginx (no public IP)
+- A Compute Engine VM running Nginx (no public IP) attached to your existing VPC
 - Firewall rules that allow only IAP traffic
 - IAP TCP tunneling for SSH access
-- IAP HTTPS protection for the web application
+- IAP TCP tunneling for authenticated HTTP access (no load balancer or SSL certificate required)
 - OS Login for identity-based SSH authentication
 
 ---
@@ -34,13 +33,14 @@ User (Google Identity)
     and IAM policy]
         |
         v
-  Internal Load Balancer  <-- HTTPS traffic (port 443)
+  IAP TCP Tunnel
+  (port 22 for SSH, port 80 for HTTP)
         |
         v
   VM: nginx-server        <-- No public IP
   (us-central1-a)
         |
-  VPC: lab-vpc
+  VPC: lab-vpc  (pre-existing)
   Subnet: lab-subnet (10.0.0.0/24)
 ```
 
@@ -63,46 +63,32 @@ User (Google Identity)
 
 ---
 
-## Part 2 — Create a Custom VPC Network
+## Part 2 — Verify the Existing VPC Network
 
-### 2.1 Create the VPC
+> Your VPC (`lab-vpc`) is already created. This part verifies it is correctly configured before you attach the VM to it.
+
+### 2.1 Confirm the VPC and Subnet Exist
 
 1. In the left navigation menu go to **VPC network > VPC networks**.
-2. Click **Create VPC network**.
-3. Fill in the following fields:
+2. Locate **`lab-vpc`** in the list and click it.
+3. Under the **Subnets** tab confirm that **`lab-subnet`** exists in `us-central1` with the range `10.0.0.0/24`.
+4. Confirm that **Private Google Access** is set to **On** for `lab-subnet`. If it is Off:
+   - Click `lab-subnet`.
+   - Click **Edit**.
+   - Toggle **Private Google Access** to **On**.
+   - Click **Save**.
 
-   | Field | Value |
-   |---|---|
-   | Name | `lab-vpc` |
-   | Description | `Zero Trust lab network` |
-   | Subnet creation mode | Custom |
+### 2.2 Confirm No Unwanted Ingress Rules
 
-4. In the **New subnet** section fill in:
-
-   | Field | Value |
-   |---|---|
-   | Name | `lab-subnet` |
-   | Region | `us-central1` |
-   | IP address range | `10.0.0.0/24` |
-   | Private Google Access | On |
-   | Flow logs | Off |
-
-5. Under **Dynamic routing mode** select **Regional**.
-6. Click **Create** and wait for the VPC to appear in the list.
-
-### 2.2 Delete the Default Routes (optional hardening)
-
-> Skip this section if you are using a shared or production project. It only applies if you created a fresh VPC and want strict egress control.
-
-1. Go to **VPC network > Routes**.
-2. Filter by network `lab-vpc`.
-3. The default route to `0.0.0.0/0` via `default-internet-gateway` will not exist because you created a custom-mode VPC — this is expected and correct.
+1. Go to **VPC network > Firewall**.
+2. Filter by **Network: lab-vpc**.
+3. Verify there is no existing rule that allows ingress from `0.0.0.0/0` on port 22 or port 80. If one exists, note its name — you may need to delete or adjust it after creating the tighter IAP-only rules in Part 3.
 
 ---
 
 ## Part 3 — Configure Firewall Rules
 
-You will create two firewall rules: one that allows IAP to reach the VM on SSH, and one that allows the load balancer health checker and IAP traffic on port 80.
+You will create two firewall rules: one that allows IAP to reach the VM on SSH, and one that allows IAP traffic on port 80.
 
 ### 3.1 Allow IAP for SSH (port 22)
 
@@ -127,14 +113,14 @@ You will create two firewall rules: one that allows IAP to reach the VM on SSH, 
 
 > The range `35.235.240.0/20` is Google's IAP forwarder range. Traffic arriving from this range has already passed IAP authentication.
 
-### 3.2 Allow IAP and Load Balancer for HTTP (port 80)
+### 3.2 Allow IAP for HTTP (port 80)
 
 1. Click **Create firewall rule** again.
 2. Fill in:
 
    | Field | Value |
    |---|---|
-   | Name | `allow-iap-lb-http` |
+   | Name | `allow-iap-http` |
    | Network | `lab-vpc` |
    | Priority | `1000` |
    | Direction of traffic | Ingress |
@@ -142,16 +128,16 @@ You will create two firewall rules: one that allows IAP to reach the VM on SSH, 
    | Targets | Specified target tags |
    | Target tags | `http-server` |
    | Source filter | IPv4 ranges |
-   | Source IPv4 ranges | `35.235.240.0/20,130.211.0.0/22,35.191.0.0/16` |
+   | Source IPv4 ranges | `35.235.240.0/20` |
    | Protocols and ports | TCP: `80` |
 
 3. Click **Create**.
 
-> The additional ranges (`130.211.0.0/22` and `35.191.0.0/16`) are Google Cloud load balancer health checker ranges.
+> Unlike a load balancer setup, IAP TCP forwarding for port 80 only requires the IAP forwarder range — no additional health checker ranges are needed.
 
-### 3.3 Deny All Other Ingress (verify default)
+### 3.3 Verify Default Deny
 
-Custom VPC networks automatically have an implied deny-all ingress rule at priority 65535. Verify it exists:
+Custom VPC networks have an implied deny-all ingress rule at priority 65535. To confirm:
 
 1. On the Firewall page filter by **Network: lab-vpc**.
 2. Scroll to the bottom and confirm you see `default-deny-all-ingress` with priority `65535`.  
@@ -278,146 +264,56 @@ Type `exit` to close the terminal.
 
 ---
 
-## Part 6 — Expose Nginx via IAP (HTTPS)
+## Part 6 — Access Nginx via IAP TCP Port Forwarding (HTTP)
 
-To protect the web application with IAP you need an HTTPS load balancer with an IAP-enabled backend. Compute Engine backends require a backend service backed by an instance group.
+Instead of provisioning a load balancer and SSL certificate, you will use IAP TCP forwarding to tunnel port 80 directly to your local machine through Cloud Shell. This is instant to set up and requires no certificate provisioning.
 
-### 6.1 Create an Instance Group
+### 6.1 Grant IAP Tunnel Access (already done in Part 5)
 
-1. Go to **Compute Engine > Instance groups**.
-2. Click **Create instance group**.
-3. Select **New unmanaged instance group**.
-4. Fill in:
+The **IAP-secured Tunnel User** role granted in Part 5.1 covers both SSH (port 22) and HTTP (port 80) tunneling. No additional IAM changes are needed.
 
-   | Field | Value |
-   |---|---|
-   | Name | `nginx-ig` |
-   | Location | Single zone |
-   | Region | `us-central1` |
-   | Zone | `us-central1-a` |
-   | Network | `lab-vpc` |
-   | Subnetwork | `lab-subnet` |
+### 6.2 Open a Port 80 Tunnel via Cloud Shell
 
-5. Under **VM instances** click **Select instances** and add `nginx-server`.
-6. Click **Create**.
+1. Open **Cloud Shell** by clicking the terminal icon at the top right of the console.
+2. Run the following command to create a local tunnel on port 8080 that forwards to port 80 on the VM:
 
-### 6.2 Reserve a Static External IP
+   ```bash
+   gcloud compute start-iap-tunnel nginx-server 80 \
+     --local-host-port=localhost:8080 \
+     --zone=us-central1-a \
+     --project=YOUR_PROJECT_ID
+   ```
 
-1. Go to **VPC network > IP addresses**.
-2. Click **Reserve external static address**.
-3. Fill in:
+3. Cloud Shell will print:
 
-   | Field | Value |
-   |---|---|
-   | Name | `lab-lb-ip` |
-   | Network service tier | Premium |
-   | IP version | IPv4 |
-   | Type | Global |
+   ```
+   Listening on port [8080].
+   ```
 
-4. Click **Reserve** and note the assigned IP address.
+   Leave this terminal open — the tunnel is active as long as the command runs.
 
-### 6.3 Create an HTTPS Load Balancer
+4. Click the **Web Preview** button (the eye icon at the top right of Cloud Shell) and select **Preview on port 8080**.
 
-1. Go to **Network services > Load balancing**.
-2. Click **Create load balancer**.
-3. Under **HTTP(S) Load Balancing** click **Start configuration**.
-4. Select:
-   - **From Internet to my VMs or serverless services**
-   - **Global HTTP(S) Load Balancer (classic)**
-5. Click **Continue**.
-6. Name: `lab-lb`
-
-**Backend configuration:**
-
-7. Click **Backend configuration > Create a backend service**.
-8. Fill in:
-
-   | Field | Value |
-   |---|---|
-   | Name | `nginx-backend` |
-   | Backend type | Instance group |
-   | Protocol | HTTP |
-   | Named port | `http` |
-
-9. Under **Backends** click **Add backend**:
-   - Instance group: `nginx-ig`
-   - Port numbers: `80`
-   - Balancing mode: Utilization
-   - Maximum backend utilization: `80`
-
-10. Under **Health check** click **Create a health check**:
-    - Name: `nginx-health-check`
-    - Protocol: HTTP
-    - Port: `80`
-    - Request path: `/`
-    - Click **Save**.
-
-11. Leave other defaults and click **Create**.
-
-**Frontend configuration:**
-
-12. Click **Frontend configuration**.
-13. Fill in:
-
-    | Field | Value |
-    |---|---|
-    | Name | `lab-frontend` |
-    | Protocol | HTTPS |
-    | Network service tier | Premium |
-    | IP address | `lab-lb-ip` (the one you reserved) |
-    | Port | `443` |
-
-14. Under **Certificate** click **Create a new certificate**:
-    - Name: `lab-cert`
-    - Mode: **Google-managed certificate**
-    - Domains: enter a domain you own, or use `<YOUR_IP>.nip.io` as a test domain (replace `<YOUR_IP>` with dots replaced by dashes, e.g. `34-120-1-5.nip.io`)
-    - Click **Create**.
-
-15. Click **Done**, then click **Review and finalize**, then **Create**.
-
-> The load balancer may take 5-10 minutes to provision. The SSL certificate can take up to 15 minutes to activate if using a Google-managed cert with a real domain.
-
-### 6.4 Enable IAP on the Backend
-
-1. Go to **Security > Identity-Aware Proxy**.
-2. Click the **Web** tab.
-3. Find `nginx-backend` in the list.
-4. Toggle the IAP switch to **On**.
-5. In the confirmation dialog click **Turn on**.
-
-### 6.5 Grant IAP Access to Your Identity
-
-1. Check the checkbox next to `nginx-backend`.
-2. In the right panel click **Add principal**.
-3. Enter your Google account email.
-4. Role: **Cloud IAP > IAP-secured Web App User**
-5. Click **Save**.
-
----
-
-## Part 7 — Test End-to-End Zero Trust Access
-
-### 7.1 Test IAP Web Access
-
-1. Wait for the load balancer to finish provisioning (check **Network services > Load balancing** — the status should show a green checkmark).
-2. Open a browser and navigate to `https://<YOUR_DOMAIN_OR_NIP_IO>`.
-3. Google's IAP login screen will appear. Sign in with the Google account you granted access to.
-4. After successful authentication you will see:
+5. A browser tab opens and displays:
 
    ```
    Zero Trust Lab — nginx-server
    Served securely via IAP.
    ```
 
-### 7.2 Test That Direct Access Is Blocked
+> Cloud Shell's Web Preview routes through IAP automatically. Any request that reaches the VM has already been authenticated by Google identity. No SSL certificate configuration is needed because IAP handles the TLS termination at Google's edge.
 
-1. Try visiting `http://<lb-ip>` directly without HTTPS — it should fail or redirect.
-2. Confirm that the VM has no public IP by going to **Compute Engine > VM instances** and checking the External IP column.
-3. Confirm that no SSH port is open to the internet by going to **VPC network > Firewall** and verifying that port 22 is only allowed from `35.235.240.0/20`.
+### 6.3 Test That Direct Access Is Blocked
 
-### 7.3 Test IAP TCP Tunnel from Cloud Shell
+1. Confirm the VM has no public IP: go to **Compute Engine > VM instances** and check the External IP column — it should show `None`.
+2. Try navigating directly to `http://<internal-ip>` in a browser — it will time out because there is no public IP and no internet-facing port open.
+3. Verify port 80 is restricted: go to **VPC network > Firewall**, confirm `allow-iap-http` only permits source `35.235.240.0/20` — no wide-open ingress.
 
-1. Open **Cloud Shell** by clicking the terminal icon at the top right of the console.
+---
+
+## Part 7 — Test IAP SSH Tunnel from Cloud Shell
+
+1. Open a second Cloud Shell tab (or press Ctrl+C to stop the port tunnel first).
 2. Run:
 
    ```bash
@@ -427,7 +323,7 @@ To protect the web application with IAP you need an HTTPS load balancer with an 
      --project=YOUR_PROJECT_ID
    ```
 
-3. The command should connect without needing a public IP or open SSH port.
+3. The command connects without needing a public IP or open SSH port.
 4. Inside the VM, run `curl http://localhost` to confirm Nginx responds.
 5. Type `exit`.
 
@@ -439,15 +335,15 @@ At this point your setup enforces the following Zero Trust principles:
 
 | Control | Implementation |
 |---|---|
-| Verify identity before granting access | IAP requires Google authentication for every request |
-| Least privilege | IAM roles `IAP-secured Web App User` and `IAP-secured Tunnel User` grant only what is needed |
+| Verify identity before granting access | IAP requires Google authentication for every SSH and HTTP request |
+| Least privilege | IAM role `IAP-secured Tunnel User` grants only tunnel access — nothing else |
 | No implicit trust from network location | VM has no public IP; firewall only allows IAP forwarder range |
-| Encrypted in transit | All traffic goes through HTTPS; IAP tunnel encrypts SSH |
+| Encrypted in transit | IAP TCP tunnel is TLS-encrypted end-to-end at Google's edge |
 | Device-aware access (optional extension) | IAP can be combined with Access Context Manager for device posture checks |
 
 ### 8.1 Optional — Add Access Context Manager Policy
 
-To enforce additional context (e.g. allow only corporate devices):
+To enforce additional context (e.g. allow only corporate devices or IPs):
 
 1. Go to **Security > Access Context Manager**.
 2. Click **New access level**.
@@ -484,14 +380,12 @@ To grant OS Login access to a user:
 
 To avoid ongoing charges, delete the resources created in this lab.
 
-1. **Load balancer** — Go to **Network services > Load balancing**, select `lab-lb`, click **Delete**.
-2. **Backend service** — Deleted with the load balancer, but verify under **Backend services**.
-3. **Instance group** — Go to **Compute Engine > Instance groups**, delete `nginx-ig`.
-4. **VM** — Go to **Compute Engine > VM instances**, select `nginx-server`, click **Delete**.
-5. **Static IP** — Go to **VPC network > IP addresses**, release `lab-lb-ip`.
-6. **Firewall rules** — Go to **VPC network > Firewall**, delete `allow-iap-ssh` and `allow-iap-lb-http`.
-7. **VPC** — Go to **VPC network > VPC networks**, delete `lab-vpc` (this also deletes `lab-subnet`).
-8. **SSL certificate** — Go to **Network services > Load balancing > Certificates**, delete `lab-cert`.
+> The VPC (`lab-vpc`) was pre-existing and is not deleted here. Only resources created during this lab are removed.
+
+1. **VM** — Go to **Compute Engine > VM instances**, select `nginx-server`, click **Delete**.
+2. **Firewall rules** — Go to **VPC network > Firewall**, delete `allow-iap-ssh` and `allow-iap-http`.
+
+No load balancer, backend service, instance group, static IP, or SSL certificate was created, so there is nothing further to clean up.
 
 ---
 
@@ -499,10 +393,10 @@ To avoid ongoing charges, delete the resources created in this lab.
 
 You have completed the lab. Here is what you built:
 
-- A custom VPC with no internet ingress except through IAP forwarder IPs
+- Verified and used a pre-existing custom VPC with Private Google Access enabled
 - A Compute Engine VM running Nginx with no external IP address
 - IAP TCP tunneling so SSH access requires a verified Google identity and an IAM role
-- An HTTPS load balancer with IAP enabled so web access requires authentication
+- IAP TCP port forwarding on port 80 so web access requires authentication — no load balancer, no SSL certificate, no waiting on certificate provisioning
 - OS Login to replace static SSH keys with Google-identity-based access control
 
 This architecture removes the need for a VPN, eliminates standing network-level trust, and ensures every access attempt — whether SSH or HTTP — is verified against Google's identity infrastructure before it reaches your workload.
@@ -512,9 +406,9 @@ This architecture removes the need for a VPN, eliminates standing network-level 
 ## Reference Links
 
 - [Identity-Aware Proxy documentation](https://cloud.google.com/iap/docs)
-- [IAP TCP forwarding](https://cloud.google.com/iap/docs/tcp-forwarding-overview)
+- [IAP TCP forwarding overview](https://cloud.google.com/iap/docs/tcp-forwarding-overview)
+- [gcloud compute start-iap-tunnel](https://cloud.google.com/sdk/gcloud/reference/compute/start-iap-tunnel)
 - [OS Login overview](https://cloud.google.com/compute/docs/oslogin)
 - [Access Context Manager](https://cloud.google.com/access-context-manager/docs)
 - [BeyondCorp Enterprise overview](https://cloud.google.com/beyondcorp-enterprise/docs/overview)
 - [VPC firewall rules](https://cloud.google.com/vpc/docs/firewalls)
-- [Google Cloud load balancing](https://cloud.google.com/load-balancing/docs/https)
