@@ -92,7 +92,7 @@ Click **Configure** on the final screen.
 2. Verify the frontend and backend summary
 3. Click **Create**
 
-> ⏳ Wait **2–3 minutes** for provisioning to complete.
+>  Wait **2–3 minutes** for provisioning to complete.
 
 **Test the endpoint:**
 ```bash
