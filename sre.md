@@ -172,6 +172,7 @@ logging:
       type: files
       include_paths:
         - /var/log/syslog
+        - /var/log/nginx/access.log
   service:
     pipelines:
       syslog_pipeline:
